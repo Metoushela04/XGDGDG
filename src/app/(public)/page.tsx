@@ -96,16 +96,17 @@ function HeroSection() {
         {/* Badge supprimé - pas professionnel */}
 
         {/* Main Headline */}
-        <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold leading-[0.9] tracking-tight mb-8">
-          <AnimatedText delay={0.3}>
-            <span className="block text-text">Votre stock </span>
-          </AnimatedText>
-          <AnimatedText delay={0.4}>
-            <span className="block text-accent text-glow-accent">illimité</span>
-          </AnimatedText>
-          <AnimatedText delay={0.5}>
-            <span className="block text-text">de produits digitaux</span>
-          </AnimatedText>
+      <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold leading-[0.9] tracking-tight mb-8">
+  <AnimatedText delay={0.3}>
+    <span className="block text-text">
+      Votre stock{" "}
+      <span className="text-accent text-glow-accent">illimité</span>
+    </span>
+  </AnimatedText>
+
+  <AnimatedText delay={0.5}>
+    <span className="block text-text">de produits digitaux</span>
+  </AnimatedText>
         </h1>
 
         {/* Subheadline */}
