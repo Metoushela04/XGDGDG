@@ -98,7 +98,7 @@ function HeroSection() {
         {/* Main Headline */}
         <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold leading-[0.9] tracking-tight mb-8">
           <AnimatedText delay={0.3}>
-            <span className="block text-text">Votre stock</span>
+            <span className="block text-text">Votre stock </span>
           </AnimatedText>
           <AnimatedText delay={0.4}>
             <span className="block text-accent text-glow-accent">illimité</span>
