@@ -96,7 +96,7 @@ export default function DashboardCatalogue() {
                   </div>
                 )}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-4xl opacity-20">📦</span>
+                  <Package className="w-12 h-12 text-accent opacity-20" />
                 </div>
               </div>
               <div className="p-6">

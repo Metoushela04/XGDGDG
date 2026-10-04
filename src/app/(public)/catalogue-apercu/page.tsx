@@ -139,9 +139,9 @@ export default function CatalogueApercuPage() {
                         {product.badge}
                       </div>
                     )}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-4xl opacity-20">📦</div>
-                    </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Package className="w-12 h-12 text-accent opacity-20" />
+                </div>
                   </div>
                   <div className="p-6">
                     <div className="text-xs text-muted mb-2">{product.category}</div>

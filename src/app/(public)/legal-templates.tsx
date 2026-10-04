@@ -3,6 +3,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 
 export function LegalPage({
   title,
@@ -28,8 +29,9 @@ export function LegalPage({
           </div>
 
           <div className="mt-16 p-6 border border-yellow-500/20 bg-yellow-500/5 rounded-xl">
-            <p className="text-sm text-yellow-500">
-              ⚠️ Ces textes sont des modèles à faire valider par un juriste avant la mise en production.
+            <p className="text-sm text-yellow-500 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              Ces textes sont des modèles à faire valider par un juriste avant la mise en production.
             </p>
           </div>
         </motion.div>

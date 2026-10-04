@@ -3,6 +3,7 @@
 
 import { motion } from "framer-motion";
 import { SpotlightCard } from "@/components/ui/SpotlightCard";
+import { MessageCircle } from "lucide-react";
 
 export default function ContactPage() {
   return (
@@ -42,7 +43,7 @@ export default function ContactPage() {
           </SpotlightCard>
 
           <SpotlightCard className="p-8 text-center">
-            <div className="text-4xl mb-4">💬</div>
+            <MessageCircle className="w-8 h-8 text-accent mb-4" />
             <h3 className="font-display text-xl font-semibold mb-2">WhatsApp</h3>
             <p className="text-sm text-muted mb-4">Réponse rapide</p>
             <a
