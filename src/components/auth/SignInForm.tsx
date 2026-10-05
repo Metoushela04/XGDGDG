@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signInAction } from "@/app/(auth)/actions";
+import { getAuthCallbackUrl } from "@/lib/auth/callback-url";
 import { signInSchema, type SignInInput } from "@/lib/validation/auth";
 import { createClient } from "@/lib/supabase/client";
 import { AuthCard, Divider, Field, FormAlert, GoogleButton, SubmitButton } from "./ui";
@@ -39,7 +40,7 @@ export function SignInForm({ next, urlError }: { next?: string; urlError?: strin
 
   const signInWithGoogle = async () => {
     const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+    const redirectTo = getAuthCallbackUrl(next ? { next } : {});
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
     if (error) setError("Connexion Google indisponible pour le moment.");
   };

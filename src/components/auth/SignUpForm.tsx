@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signUpAction } from "@/app/(auth)/actions";
+import { getAuthCallbackUrl } from "@/lib/auth/callback-url";
 import { signUpSchema, type SignUpInput } from "@/lib/validation/auth";
 import { createClient } from "@/lib/supabase/client";
 import { AuthCard, Divider, Field, FormAlert, GoogleButton, SubmitButton } from "./ui";
@@ -45,7 +46,7 @@ export function SignUpForm({ urlError }: { urlError?: string }) {
     const valid = await trigger("acceptTerms");
     if (!valid || !getValues("acceptTerms")) return;
     const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback?accepted=1`;
+    const redirectTo = getAuthCallbackUrl({ accepted: "1" });
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
     if (error) setError("Inscription Google indisponible pour le moment.");
   };

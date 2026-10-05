@@ -1,79 +1,115 @@
-// Vendix - Profil Utilisateur
-"use client";
+// Profil utilisateur connecté à Supabase (PRD §5)
+import { createClient } from "@/lib/supabase/server";
+import { User, Mail, Calendar, Shield, Save } from "lucide-react";
+import { revalidatePath } from "next/cache";
 
-import { motion } from "framer-motion";
-import { User, Mail, Camera, Save } from "lucide-react";
-import { useState } from "react";
+export const revalidate = 0;
 
-export default function ProfilPage() {
-  const [form, setForm] = useState({
-    nom: "",
-    email: "",
-  });
+export default async function ProfilPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, email, role, created_at, avatar_url")
+    .eq("id", user.id)
+    .single();
+
+  const handleUpdateProfile = async (formData: FormData) => {
+    "use server";
+    const fullName = formData.get("fullName") as string;
+    const sb = await createClient();
+    const { data: { user: currentUser } } = await sb.auth.getUser();
+    if (!currentUser) return;
+
+    await sb
+      .from("profiles")
+      .update({ full_name: fullName.trim() })
+      .eq("id", currentUser.id);
+
+    revalidatePath("/dashboard/profil");
+  };
+
+  const memberSince = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString("fr-FR", {
+        month: "long",
+        year: "numeric",
+      })
+    : "—";
 
   return (
-    <div>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="font-display text-3xl font-bold mb-2">
+    <div className="space-y-8 max-w-3xl">
+      <div>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold mb-1">
           Mon <span className="text-accent">profil</span>
         </h1>
-        <p className="text-muted">Gérez vos informations personnelles</p>
-      </motion.div>
+        <p className="text-sm text-muted">Gérez vos informations personnelles et votre compte</p>
+      </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Avatar card */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="md:col-span-1">
-          <div className="rounded-2xl border border-[#222222] bg-surface/50 p-6 text-center">
-            <div className="relative inline-block mb-4">
-              <div className="w-24 h-24 rounded-full bg-surface2 border-2 border-[#222222] flex items-center justify-center mx-auto">
-                <User className="w-10 h-10 text-muted" />
+      <div className="grid sm:grid-cols-3 gap-6">
+        {/* Carte avatar et rôle */}
+        <div className="sm:col-span-1 rounded-2xl border border-[#222222] bg-surface/50 p-6 text-center space-y-4 h-fit">
+          <div className="w-20 h-20 rounded-full bg-surface2 border-2 border-[#222222] flex items-center justify-center mx-auto text-accent text-2xl font-bold">
+            {profile?.full_name ? profile.full_name[0].toUpperCase() : user.email?.[0].toUpperCase()}
+          </div>
+          <div>
+            <div className="font-semibold text-base text-text">
+              {profile?.full_name || "Membre Vendix"}
+            </div>
+            <div className="text-xs text-muted font-mono truncate">{user.email}</div>
+          </div>
+          <div className="pt-2">
+            <span className="px-3 py-1 bg-surface2 border border-[#222222] text-xs font-semibold rounded-full text-accent">
+              {profile?.role === "admin" ? "Administrateur" : "Membre VIP"}
+            </span>
+          </div>
+        </div>
+
+        {/* Formulaire de modification */}
+        <div className="sm:col-span-2 rounded-2xl border border-[#222222] bg-surface/50 p-6 space-y-5">
+          <h2 className="font-display font-semibold text-base">Informations du compte</h2>
+          <form action={handleUpdateProfile} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-muted mb-1.5 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-accent" /> Nom complet
+              </label>
+              <input
+                type="text"
+                name="fullName"
+                defaultValue={profile?.full_name || ""}
+                placeholder="Votre nom complet"
+                className="w-full px-4 py-2.5 bg-surface2 border border-[#222222] rounded-xl text-sm focus:border-accent/50 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-muted mb-1.5 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-accent" /> Adresse e-mail (non modifiable)
+              </label>
+              <input
+                type="email"
+                disabled
+                value={user.email || ""}
+                className="w-full px-4 py-2.5 bg-surface2/50 border border-[#222222] rounded-xl text-sm text-muted cursor-not-allowed font-mono text-xs"
+              />
+            </div>
+
+            <div className="pt-2 flex items-center justify-between">
+              <div className="text-xs text-muted flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" /> Membre depuis {memberSince}
               </div>
-              <button className="absolute bottom-0 right-0 w-8 h-8 bg-accent text-background rounded-full flex items-center justify-center hover:bg-accent-dim transition-all">
-                <Camera className="w-4 h-4" />
+              <button
+                type="submit"
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-accent text-background font-bold text-xs rounded-xl hover:bg-accent-dim transition-all"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Enregistrer</span>
               </button>
             </div>
-            <div className="font-display font-semibold text-lg text-muted">{form.nom || "—"}</div>
-            <div className="text-sm text-muted">{form.email || "—"}</div>
-          </div>
-        </motion.div>
-
-        {/* Form */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="md:col-span-2">
-          <div className="rounded-2xl border border-[#222222] bg-surface/50 p-6">
-            <h2 className="font-display font-semibold text-lg mb-6">Informations personnelles</h2>
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                  <User className="w-4 h-4 text-muted" /> Nom complet
-                </label>
-                <input
-                  type="text"
-                  value={form.nom}
-                  onChange={(e) => setForm({ ...form, nom: e.target.value })}
-                  placeholder="Votre nom complet"
-                  className="w-full px-4 py-3 bg-surface2 border border-[#222222] rounded-xl focus:border-accent/50 focus:outline-none transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-muted" /> Email
-                </label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="votre@email.com"
-                  className="w-full px-4 py-3 bg-surface2 border border-[#222222] rounded-xl focus:border-accent/50 focus:outline-none transition-colors"
-                />
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button className="flex items-center gap-2 px-6 py-3 bg-accent text-background font-medium rounded-xl hover:bg-accent-dim transition-all">
-                <Save className="w-4 h-4" /> Sauvegarder
-              </button>
-            </div>
-          </div>
-        </motion.div>
+          </form>
+        </div>
       </div>
     </div>
   );
