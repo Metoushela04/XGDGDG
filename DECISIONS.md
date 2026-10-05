@@ -32,3 +32,12 @@ Choix faits là où le PRD était absent, ambigu ou perfectible.
 10. **Suspension à la connexion et dans le callback** : un compte suspendu ne peut ni ouvrir de session ni rester connecté.
 11. **Correctif hors PRD** : `Footer.tsx` importait `Github`, `Twitter` et `Linkedin` depuis `lucide-react`, icônes absentes de la version installée et non utilisées. Cela faisait échouer `next build`. Imports supprimés.
 12. **Nouvelles dépendances** : `@hookform/resolvers` (Zod avec React Hook Form) et `server-only` (empêche d'importer du code serveur dans un composant client).
+
+## Étapes 5 à 8 — Dashboard membre, Stockage R2/Cloudinary, Admin & Chariow
+
+1. **Stockage R2 (S3-compatible)** : module `lib/storage/r2.ts` utilisant `@aws-sdk/client-s3` et `@aws-sdk/s3-request-presigner`. Les URLs de téléchargement expirent après 60 secondes avec en-tête `Content-Disposition: attachment`. Les clés R2 ne sont jamais transmises au client.
+2. **Stockage Cloudinary** : module `lib/storage/cloudinary.ts` générant les signatures d'upload côté serveur pour permettre l'envoi direct depuis le navigateur sans saturer la bande passante du serveur Next.js.
+3. **Paiements Chariow** : module `lib/payments/` avec interface `PaymentProvider` (`provider.ts`) et implémentation `chariow.ts`. Vérification de signature cryptographique HMAC SHA-256 (`node:crypto`). Idempotence garantie via table `webhook_events`. En environnement de développement sans clés de production, un mode fallback simulé est activé.
+4. **Quotas de téléchargement** : `lib/quota.ts` applique la règle PRD §7.4 : le re-téléchargement d'un même produit dans le mois courant ne consomme pas de quota supplémentaire (comptage de produits distincts).
+5. **Panneau d'administration** : routes protégées `/admin` avec validation de rôle `admin` côté proxy et côté Server Actions (`src/app/admin/actions.ts`). Upload en deux temps (Cloudinary pour miniature, R2 pour archive ZIP) avec barre de progression temps réel.
+6. **Dashboard membre branché sur Supabase** : `/dashboard/catalogue`, `/dashboard/favoris`, `/dashboard/nouveautes`, `/dashboard/telechargements`, `/dashboard/abonnement`, `/dashboard/profil` et l'accueil `/dashboard` interrogent les tables réelles avec sélection de colonnes sécurisée sans `r2_file_key`.
