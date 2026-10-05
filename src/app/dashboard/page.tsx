@@ -3,23 +3,9 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { SpotlightCard } from "@/components/ui/SpotlightCard";
-import { Package, Download, Sparkles, Heart, FileText, CreditCard, MessageCircle, HelpCircle } from "lucide-react";
+import { Package, Download, Sparkles, FileText, MessageCircle, Inbox } from "lucide-react";
 
 export default function DashboardHome() {
-  const stats = [
-    { label: "Statut", value: "VIP Actif", color: "text-green-500" },
-    { label: "Téléchargements", value: "12", color: "text-accent" },
-    { label: "Favoris", value: "5", color: "text-accent" },
-    { label: "Quota restant", value: "18/30", color: "text-accent" },
-  ];
-
-  const recentProducts = [
-    { title: "Pack Ebooks Business", category: "Ebooks", date: "Il y a 2 jours" },
-    { title: "Formation Marketing", category: "Formations", date: "Il y a 5 jours" },
-    { title: "Templates Canva Pro", category: "Templates", date: "Il y a 1 semaine" },
-  ];
-
   return (
     <div>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
@@ -29,17 +15,25 @@ export default function DashboardHome() {
         <p className="text-muted">Gérez votre business de produits digitaux</p>
       </motion.div>
 
+      {/* Stats — empty state, will be filled from database later */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat, i) => (
+        {[
+          { label: "Statut", value: "—", sub: "Aucun abonnement" },
+          { label: "Téléchargements", value: "0", sub: "ce mois" },
+          { label: "Favoris", value: "0", sub: "produits" },
+          { label: "Quota", value: "—", sub: "non actif" },
+        ].map((stat, i) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-            <SpotlightCard className="p-6">
+            <div className="rounded-2xl border border-[#222222] bg-surface/50 p-6">
               <div className="text-xs text-muted mb-1">{stat.label}</div>
-              <div className={`font-display text-2xl font-bold ${stat.color}`}>{stat.value}</div>
-            </SpotlightCard>
+              <div className="font-display text-2xl font-bold text-muted">{stat.value}</div>
+              <div className="text-[10px] text-muted mt-1">{stat.sub}</div>
+            </div>
           </motion.div>
         ))}
       </div>
 
+      {/* Recent downloads — empty state */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-xl font-semibold">Derniers téléchargements</h2>
@@ -47,21 +41,14 @@ export default function DashboardHome() {
             Voir tout →
           </Link>
         </div>
-        <div className="space-y-3">
-          {recentProducts.map((product) => (
-            <SpotlightCard key={product.title} className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-sm">{product.title}</div>
-                  <div className="text-xs text-muted">{product.category}</div>
-                </div>
-                <div className="text-xs text-muted">{product.date}</div>
-              </div>
-            </SpotlightCard>
-          ))}
+        <div className="rounded-2xl border border-[#222222] bg-surface/50 p-12 text-center">
+          <Inbox className="w-12 h-12 text-muted mx-auto mb-3" />
+          <div className="font-medium text-lg text-muted mb-1">Aucun téléchargement récent</div>
+          <p className="text-sm text-muted">Vos téléchargements apparaîtront ici.</p>
         </div>
       </motion.div>
 
+      {/* Quick actions */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="mt-8">
         <h2 className="font-display text-xl font-semibold mb-4">Actions rapides</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -72,12 +59,12 @@ export default function DashboardHome() {
             { label: "Support", href: "/dashboard/support", icon: MessageCircle },
           ].map((action) => (
             <Link key={action.label} href={action.href}>
-              <SpotlightCard className="p-6 text-center hover:border-accent/30 transition-all cursor-pointer">
+              <div className="rounded-2xl border border-[#222222] bg-surface/50 p-6 text-center hover:border-accent/30 transition-all cursor-pointer">
                 <div className="text-accent mb-2">
                   <action.icon className="w-6 h-6 mx-auto" />
                 </div>
                 <div className="text-sm font-medium">{action.label}</div>
-              </SpotlightCard>
+              </div>
             </Link>
           ))}
         </div>

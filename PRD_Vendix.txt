@@ -1,0 +1,689 @@
+# PRD — VENDIX
+**Product Requirements Document — version 1.0**
+Destinataire : agent de codage (Gemini CLI / AntiGravity / Claude Code / Cursor)
+Langue de l'interface : **français** (structure i18n prête pour ajouter l'anglais plus tard)
+
+> **Instruction à l'agent de codage** : construis l'application complète décrite ci-dessous, page par page, dans l'ordre de la section 17. Ne saute aucune page listée dans la section 6. Si une information manque, fais le choix le plus simple et le plus sécurisé, et note-le dans `DECISIONS.md`. Ne mets jamais de clé secrète dans le code : tout passe par les variables d'environnement (section 15).
+
+---
+
+## 1. Vision
+
+- **Nom** : Vendix
+- **Slogan** : « Vendix — Votre stock illimité de produits digitaux prêts à vendre. »
+- **Accroche (Hero)** : « Débloquez la première banque de produits digitaux sous licence de revente. Téléchargez nos ressources clés en main, déployez-les en 3 clics sans aucune compétence technique, et conservez 100 % de votre chiffre d'affaires. »
+- **Modèle** : plateforme d'abonnement (mensuel / annuel) donnant accès à un catalogue de produits digitaux PLR (Private Label Rights : ebooks, formations, templates Canva, scripts, kits marketing). L'abonné télécharge les packs ZIP, les revend où il veut (Webvente, Selar, WhatsApp, etc.) et garde 100 % de ses revenus.
+- **Marché cible** : entrepreneurs débutants et revendeurs francophones d'Afrique (RDC en priorité, puis Afrique francophone), utilisateurs mobiles, paiement Mobile Money.
+- **Contrainte principale** : **Mobile-First**, léger, rapide sur connexion lente.
+
+## 2. Objectifs et métriques
+
+| Objectif | Indicateur |
+|---|---|
+| Convertir les visiteurs en abonnés | Taux visiteur → inscription → abonnement |
+| Retenir les abonnés | Taux de renouvellement, churn mensuel |
+| Garder le catalogue vivant | Nombre de produits ajoutés par semaine |
+| Protéger les fichiers | 0 téléchargement possible sans abonnement actif |
+
+## 3. Rôles utilisateurs
+
+1. **Visiteur** : non connecté, voit les pages publiques et un aperçu du catalogue (sans téléchargement).
+2. **Membre inactif** : connecté, sans abonnement actif. Voit le catalogue, ne peut pas télécharger.
+3. **Membre VIP** : abonnement actif, peut télécharger dans la limite du quota.
+4. **Admin** : gère produits, catégories, utilisateurs, abonnements, pages légales, annonces, paramètres.
+
+## 4. Stack technique
+
+| Rôle | Outil |
+|---|---|
+| Framework | Next.js (App Router, TypeScript) |
+| UI | Tailwind CSS + Shadcn UI + lucide-react |
+| Base de données + Auth | Supabase (PostgreSQL, Auth, RLS) |
+| **Stockage ZIP (privé)** | **Cloudflare R2** — fichiers PLR, accès uniquement par URL signée |
+| **Stockage images (public optimisé)** | **Cloudinary** — miniatures, mockups, captures d'aperçu, avatars, certificats générés |
+| Paiement | API Chariow (Mobile Money + carte) via une couche d'abstraction |
+| E-mails | Brevo (`@getbrevo/brevo`) |
+| Validation | Zod |
+| Formulaires | React Hook Form |
+| Déploiement | Vercel (ou équivalent) |
+
+### 4.1 Répartition du stockage (deux stockages)
+
+| Type de fichier | Stockage | Accès | Raison |
+|---|---|---|---|
+| Packs ZIP / PDF / fichiers sources | Cloudflare R2 | **Privé**, URL signée de 60 s après vérification de l'abonnement | 10 Go gratuits, 0 frais de sortie, gros fichiers |
+| Miniatures, mockups 3D, captures d'aperçu | Cloudinary | Public via CDN, transformations automatiques (WebP/AVIF, redimensionnement) | Chargement rapide sur mobile |
+| Avatars utilisateurs, images de la landing | Cloudinary | Public | Idem |
+| Certificats de licence générés (PNG/PDF) | Cloudinary (image) + génération PDF côté serveur | Privé au propriétaire | Affichage et partage |
+
+**Règle** : Cloudinary ne stocke **jamais** les ZIP payants (limites de taille du plan gratuit et pas de contrôle d'accès équivalent). Les ZIP restent exclusivement sur R2.
+**Abstraction** : créer un module `lib/storage/` avec deux interfaces, `privateFiles` (R2) et `publicImages` (Cloudinary), pour pouvoir changer de fournisseur sans toucher aux pages.
+
+## 5. Design et expérience
+
+- **Thème** : Dark Mode par défaut, bascule clair/sombre disponible.
+- **Palette** : fond très sombre, couleur d'accent vive (violet ou vert émeraude), vert = actif, rouge = inactif.
+- **Typographie** : une police moderne sans empattement (ex. Inter / Plus Jakarta Sans).
+- **Composants** : Shadcn UI (Dialog, Sheet, Tabs, Table, Badge, Toast, Skeleton, Dropdown).
+- **Mobile-First** : sidebar transformée en menu bas ou Sheet sur mobile, boutons larges, zones tactiles ≥ 44 px.
+- **États obligatoires** sur chaque page : chargement (skeleton), vide, erreur, succès.
+- **Accessibilité** : contrastes AA, labels de formulaires, navigation clavier, `alt` sur les images.
+- **Performance** : images via Cloudinary (`f_auto,q_auto`), pagination du catalogue (12 à 24 cartes), pas de gros bundles.
+
+## 6. Liste complète des pages (aucune ne doit manquer)
+
+### 6.1 Pages publiques (marketing)
+| # | Route | Contenu |
+|---|---|---|
+| 1 | `/` | Landing : Hero (slogan + accroche + CTA), comment ça marche en 3 étapes, aperçu du catalogue (flouté/limité), avantages (100 % des revenus, clés en main, mobile), tarifs résumés, témoignages, FAQ courte, CTA final, footer complet |
+| 2 | `/tarifs` | Plans Mensuel et Annuel (comparatif, économie affichée), moyens de paiement, garantie, FAQ tarifs |
+| 3 | `/catalogue-apercu` | Aperçu public du catalogue (titres, miniatures, catégories, sans téléchargement) incitant à s'abonner |
+| 4 | `/comment-ca-marche` | Explication détaillée : s'abonner, télécharger, personnaliser, revendre |
+| 5 | `/a-propos` | Histoire, mission, équipe |
+| 6 | `/faq` | Questions fréquentes groupées (abonnement, licence, paiement, téléchargements, technique) |
+| 7 | `/contact` | Formulaire de contact (nom, e-mail, sujet, message), WhatsApp, e-mail de support, anti-spam |
+| 8 | `/blog` et `/blog/[slug]` | Articles (optionnel mais routes et table prévues), gérés depuis l'admin |
+
+### 6.2 Pages légales (toutes obligatoires, accessibles depuis le footer et à l'inscription)
+| # | Route | Contenu minimal à inclure |
+|---|---|---|
+| 9 | `/conditions-generales-utilisation` | **Conditions Générales d'Utilisation (CGU)** : objet, création de compte, responsabilités de l'utilisateur, comportements interdits, propriété intellectuelle, suspension/résiliation de compte, limitation de responsabilité, droit applicable, modification des conditions, contact |
+| 10 | `/conditions-generales-vente` | **Conditions Générales de Vente (CGV)** : description du service, prix, périodicité, renouvellement automatique, moyens de paiement, résiliation, accès immédiat au contenu numérique, politique de remboursement, facturation, litiges |
+| 11 | `/licence-plr` | **Licence de revente (termes PLR)** : ce qui est autorisé (revendre, modifier, rebrander, garder 100 % des revenus), ce qui est interdit (redistribuer gratuitement les fichiers sources, revendre l'accès à Vendix, partager son compte, céder les droits PLR, mettre en vente sur des plateformes de packs PLR concurrentes), durée de validité de la licence, licences par produit si précisées |
+| 12 | `/politique-de-confidentialite` | **Politique de confidentialité** : données collectées (nom, e-mail, historique de téléchargements, paiements via Chariow), finalités, durée de conservation, sous-traitants (Supabase, Cloudflare, Cloudinary, Chariow, Brevo), droits de l'utilisateur (accès, rectification, suppression), contact |
+| 13 | `/politique-de-cookies` | Cookies utilisés (session, préférences, mesure d'audience), gestion du consentement |
+| 14 | `/mentions-legales` | Éditeur, responsable de publication, hébergeur, contact |
+| 15 | `/politique-de-remboursement` | Conditions de remboursement (par défaut : contenu numérique accessible immédiatement, remboursement limité ; durée et cas à confirmer par le propriétaire) |
+| 16 | `/politique-utilisation-acceptable` | Usages interdits (partage de compte, scraping, redistribution massive, contenu illégal) et sanctions |
+| 17 | `/signaler-un-contenu` | Formulaire de signalement de violation de droits d'auteur (type DMCA) et procédure de retrait |
+
+> **Important pour l'agent** : génère un **texte de départ complet en français** pour chaque page légale ci-dessus, avec des champs à compléter entre crochets (`[NOM DE LA SOCIÉTÉ]`, `[ADRESSE]`, `[EMAIL]`, `[PAYS]`). Ajoute un bandeau interne dans l'admin : « Ces textes sont des modèles à faire valider par un juriste avant la mise en production. » Les pages légales doivent être **éditables depuis l'admin** (éditeur Markdown) et afficher « Dernière mise à jour : date ».
+
+### 6.3 Pages d'authentification
+| # | Route | Contenu |
+|---|---|---|
+| 18 | `/inscription` | Nom complet, e-mail, mot de passe, **case obligatoire « J'accepte les CGU, CGV et la Politique de confidentialité »** (liens vers les pages), option Google |
+| 19 | `/connexion` | E-mail + mot de passe, option Google, lien « mot de passe oublié » |
+| 20 | `/mot-de-passe-oublie` | Envoi du lien de réinitialisation |
+| 21 | `/reinitialiser-mot-de-passe` | Nouveau mot de passe |
+| 22 | `/verifier-email` | Message « vérifie ta boîte mail » + renvoi du lien |
+| 23 | `/auth/callback` | Route technique OAuth / confirmation e-mail |
+
+### 6.4 Espace membre (protégé, préfixe `/dashboard`)
+| # | Route | Contenu |
+|---|---|---|
+| 24 | `/dashboard` | Accueil membre : résumé (statut, quota restant, derniers ajouts, derniers téléchargements), annonces |
+| 25 | `/dashboard/catalogue` | **Catalogue PLR** : grille de produits, recherche textuelle, filtres (catégorie, outil requis, tri par nouveauté), pagination |
+| 26 | `/dashboard/produits/[id]` | Fiche produit : mockup, description, contenu du ZIP (liste des fichiers), outils requis, taille, bouton « Débloquer le Pack » ou « Télécharger le Pack ZIP », bouton favori, produits similaires. (La carte du catalogue peut aussi ouvrir une Dialog avec le même résumé.) |
+| 27 | `/dashboard/telechargements` | Historique personnel, re-téléchargement |
+| 28 | `/dashboard/nouveautes` | Produits ajoutés cette semaine |
+| 29 | `/dashboard/favoris` | Produits mis en favori |
+| 30 | `/dashboard/certificat` | **Certificat de Licence** : générateur de diplôme de droit de revente (nom du membre, produit, date, numéro unique, QR de vérification), téléchargement PNG/PDF |
+| 31 | `/dashboard/abonnement` | Statut, plan, date de renouvellement, historique des paiements, bouton « Gérer mon accès » / « S'abonner » / « Changer de plan », annulation |
+| 32 | `/dashboard/profil` | Modifier nom, avatar (Cloudinary), mot de passe, suppression du compte |
+| 33 | `/dashboard/notifications` | Liste des notifications (nouveaux produits, expiration proche) |
+| 34 | `/dashboard/support` | Créer et suivre un ticket de support, lien WhatsApp |
+| 35 | `/dashboard/aide` | Guide pratique : comment revendre, où vendre, personnaliser un template Canva |
+| 36 | `/verification-certificat/[numero]` | Page **publique** qui confirme l'authenticité d'un certificat (nom, produit, date) |
+
+### 6.5 Paiement
+| # | Route | Contenu |
+|---|---|---|
+| 37 | `/paiement/succes` | Confirmation après paiement, attente de validation du webhook, redirection vers le dashboard |
+| 38 | `/paiement/annule` | Paiement annulé ou échoué, bouton réessayer |
+
+### 6.6 Administration (rôle `admin` uniquement, préfixe `/admin`)
+| # | Route | Contenu |
+|---|---|---|
+| 39 | `/admin` | Tableau de bord : membres, abonnés actifs, revenus, téléchargements, produits populaires, graphiques |
+| 40 | `/admin/produits` | Liste, recherche, publier/dépublier, supprimer |
+| 41 | `/admin/produits/nouveau` | Formulaire : titre, description, catégorie, outils requis, **upload miniature/aperçus vers Cloudinary**, **upload du ZIP vers R2** (URL de téléversement signée, barre de progression), liste des fichiers du ZIP, mise en avant |
+| 42 | `/admin/produits/[id]` | Modification d'un produit |
+| 43 | `/admin/categories` | CRUD des catégories |
+| 44 | `/admin/utilisateurs` | Liste, recherche, détail, suspension, changement de rôle, octroi manuel d'accès |
+| 45 | `/admin/abonnements` | Liste des abonnements, statuts, dates, actions manuelles |
+| 46 | `/admin/paiements` | Journal des paiements et des événements webhook |
+| 47 | `/admin/telechargements` | Statistiques et journal des téléchargements |
+| 48 | `/admin/tickets` | Gestion des tickets de support |
+| 49 | `/admin/messages` | Messages reçus via le formulaire de contact |
+| 50 | `/admin/annonces` | Annonces et notifications envoyées aux membres |
+| 51 | `/admin/pages-legales` | Édition des pages légales (Markdown) |
+| 52 | `/admin/blog` | Gestion des articles |
+| 53 | `/admin/signalements` | Signalements de violation de droits d'auteur |
+| 54 | `/admin/parametres` | Prix des plans, quota mensuel, e-mail de support, numéro WhatsApp, mode maintenance, clés d'affichage |
+
+### 6.7 Pages système
+| # | Route | Contenu |
+|---|---|---|
+| 55 | `/not-found` (404) | Page introuvable avec liens utiles |
+| 56 | `error.tsx` (500) | Erreur générique avec bouton réessayer |
+| 57 | `/maintenance` | Page de maintenance (activée depuis l'admin) |
+| 58 | `/acces-refuse` | 403 : accès non autorisé |
+| 59 | `/abonnement-requis` | Page affichée quand un membre inactif tente un téléchargement |
+| 60 | `sitemap.xml`, `robots.txt` | SEO |
+
+### 6.8 Composants globaux
+- **Header public** : logo, liens (Tarifs, Comment ça marche, FAQ), boutons Connexion / S'abonner.
+- **Header dashboard** : logo, **badge d'état** (vert « Membre VIP Actif » / rouge « Abonnement Inactif »), bouton « Gérer mon accès », menu profil (nom, e-mail, déconnexion), cloche de notifications.
+- **Sidebar dashboard** : Catalogue PLR, Mes Téléchargements, Nouveautés, Favoris, Certificat de Licence, Abonnement, Support, Aide.
+- **Footer** : liens vers toutes les pages légales (CGU, CGV, Licence PLR, Confidentialité, Cookies, Mentions légales, Remboursement, Usage acceptable, Signaler un contenu), contact, réseaux sociaux.
+- **Bandeau de consentement cookies**.
+- **Toasts, Dialogs de confirmation, Skeletons**.
+
+## 7. Fonctionnalités détaillées
+
+### 7.1 Authentification
+- Supabase Auth : e-mail + mot de passe, Google OAuth, vérification d'e-mail obligatoire avant accès au dashboard.
+- À l'inscription : enregistrer l'acceptation des conditions (table `legal_acceptances`, avec version et date).
+- Middleware Next.js : protège `/dashboard/*` (connecté) et `/admin/*` (rôle admin), redirige sinon.
+- Limitation de tentatives de connexion et d'envoi de formulaires (rate limit).
+
+### 7.2 Catalogue
+- Recherche textuelle (titre, description), filtres par catégorie (Ebooks, Formations, Templates Canva, Scripts, autres via admin) et par outil requis.
+- **Carte produit** : mockup visuel (image Cloudinary), titre, badges d'outils requis (Canva, PDF, Word, etc.), bouton « Débloquer le Pack » (inactif) ou « Télécharger le Pack ZIP » (actif).
+- Clic sur la carte : Dialog avec résumé du kit marketing, liste des fichiers du ZIP, bouton principal de téléchargement.
+- Badge « Nouveau » pendant 7 jours après publication.
+
+### 7.3 Téléchargement sécurisé
+Route `POST /api/download` (corps : `productId`) :
+1. Vérifier l'authentification Supabase.
+2. Vérifier l'abonnement : `status = 'active'` **et** `current_period_end > maintenant` (ne pas se fier au seul statut).
+3. Vérifier le **quota mensuel** (voir 7.4).
+4. Vérifier que le produit est publié.
+5. Générer une **URL signée R2 valable 60 secondes** (`Content-Disposition: attachment`).
+6. Enregistrer une ligne dans `downloads`.
+7. Renvoyer l'URL. En cas d'échec : codes 401 (non connecté), 403 (abonnement inactif/quota atteint), 404 (produit).
+Les ZIP ne sont **jamais** exposés par une URL publique.
+
+### 7.4 Quota et protection anti-abus
+- Quota mensuel de téléchargements par membre, **configurable dans l'admin** (valeur par défaut proposée : 30 par mois ; mettre `illimité` possible).
+- Limite de téléchargements par heure pour éviter le moissonnage automatisé.
+- Un même produit re-téléchargé ne consomme pas de quota supplémentaire dans le mois.
+- Journalisation de l'IP et de l'agent utilisateur dans `downloads`.
+- Détection simple de partage de compte (trop de connexions distinctes) : alerte dans l'admin.
+
+### 7.5 Abonnement et paiement (Chariow)
+- Plans stockés en base (`plans`) : Mensuel et Annuel, prix modifiables depuis l'admin.
+- `POST /api/chariow/checkout` : crée la session de paiement, renvoie l'URL de redirection.
+- `POST /api/chariow/webhook` :
+  - **Vérifie la signature** de Chariow (rejette sinon).
+  - **Idempotent** : table `webhook_events` avec l'identifiant d'événement unique, un événement déjà traité est ignoré.
+  - Utilise la clé Supabase `service_role` (jamais exposée au navigateur).
+  - Gère : paiement réussi (statut `active`, `current_period_end` selon le plan), renouvellement, échec de paiement, annulation, expiration.
+  - Déclenche l'e-mail de confirmation VIP.
+- Tâche planifiée quotidienne (cron) : passe en `expired` les abonnements dont `current_period_end` est dépassé et envoie un rappel 3 jours avant expiration.
+- **Couche d'abstraction** `lib/payments/` (interface `PaymentProvider`) afin de pouvoir remplacer Chariow ou ajouter un autre fournisseur.
+- ⚠️ **Point à vérifier par l'agent avant de coder** : lire la documentation officielle de Chariow pour confirmer le support des abonnements récurrents, les événements webhook réels et le mécanisme de signature. Si les abonnements récurrents ne sont pas supportés, implémenter des paiements de période fixe (30 jours / 365 jours) avec rappel de renouvellement manuel, et le signaler dans `DECISIONS.md`.
+
+### 7.6 Certificat de Licence
+- Génère un certificat par produit téléchargé (ou à la demande) : nom du membre, titre du produit, date, **numéro unique**, QR code vers `/verification-certificat/[numero]`.
+- Rendu en image (PNG, stocké sur Cloudinary) et en PDF téléchargeable.
+- Table `licenses` pour l'unicité et la vérification publique.
+
+### 7.7 Notifications et e-mails (Brevo)
+E-mails transactionnels : bienvenue, vérification d'e-mail, réinitialisation de mot de passe, confirmation d'abonnement VIP, reçu de paiement, échec de paiement, rappel d'expiration (J-3), abonnement expiré, réponse à un ticket, accusé de réception du formulaire de contact.
+E-mails marketing : nouveaux produits de la semaine (digest hebdomadaire optionnel, désinscription possible).
+Notifications dans l'application : nouveaux produits, expiration proche, annonces admin.
+
+### 7.8 Support
+- Formulaire de contact public (stocké en base + e-mail à l'admin).
+- Tickets pour les membres (sujet, message, statut ouvert/en cours/fermé, réponses).
+- Lien WhatsApp configurable.
+
+### 7.9 Administration
+- Upload en deux temps : l'admin envoie le ZIP vers R2 via une URL de téléversement signée, et les images vers Cloudinary via un upload signé côté serveur ; puis la ligne `products` est créée.
+- Statistiques : membres, abonnés actifs, revenus du mois, téléchargements par produit, nouveaux inscrits.
+- Journal d'audit des actions admin (`admin_audit_log`).
+
+### 7.10 SEO et analytics
+- Métadonnées par page, Open Graph, `sitemap.xml`, `robots.txt` (bloquer `/dashboard` et `/admin`), données structurées FAQ.
+- Analytics respectueux de la vie privée (ex. Plausible ou Vercel Analytics), activé selon le consentement cookies.
+
+## 8. Schéma de base de données (Supabase SQL)
+
+```sql
+-- Extensions
+create extension if not exists "pgcrypto";
+
+-- Rôles applicatifs
+create type user_role as enum ('member', 'admin');
+
+-- 1. Profils
+create table profiles (
+  id uuid references auth.users on delete cascade primary key,
+  full_name text,
+  email text unique not null,
+  avatar_url text,
+  role user_role not null default 'member',
+  is_suspended boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- Trigger : création automatique du profil à l'inscription
+create or replace function handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into profiles (id, email, full_name)
+  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', ''));
+  insert into subscriptions (user_id) values (new.id);
+  return new;
+end; $$;
+
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function handle_new_user();
+
+-- Fonction utilitaire admin
+create or replace function is_admin()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from profiles where id = auth.uid() and role = 'admin');
+$$;
+
+-- 2. Plans
+create table plans (
+  id uuid default gen_random_uuid() primary key,
+  code text unique not null,            -- 'monthly' | 'yearly'
+  name text not null,
+  price_amount numeric(10,2) not null,
+  currency text not null default 'USD',
+  duration_days int not null,           -- 30 ou 365
+  chariow_product_id text,
+  is_active boolean not null default true
+);
+
+-- 3. Abonnements
+create table subscriptions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade unique not null,
+  plan_id uuid references plans(id),
+  status text check (status in ('active','canceled','expired','inactive')) default 'inactive',
+  chariow_sub_id text,
+  current_period_end timestamptz,
+  cancel_at_period_end boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+-- 4. Catégories
+create table categories (
+  id uuid default gen_random_uuid() primary key,
+  name text unique not null,
+  slug text unique not null,
+  sort_order int default 0
+);
+
+-- 5. Produits PLR
+create table products (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  slug text unique not null,
+  description text,
+  category_id uuid references categories(id),
+  required_tools text[] default '{}',        -- ex: {'Canva','PDF','Word'}
+  thumbnail_url text not null,               -- Cloudinary
+  preview_images text[] default '{}',        -- Cloudinary
+  r2_file_key text not null,                 -- clé du ZIP sur Cloudflare R2
+  file_size_bytes bigint,
+  file_list jsonb default '[]',              -- contenu du ZIP affiché dans la fiche
+  is_featured boolean not null default false,
+  is_published boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- 6. Téléchargements
+create table downloads (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  product_id uuid references products(id) on delete cascade not null,
+  ip_address inet,
+  user_agent text,
+  downloaded_at timestamptz not null default now()
+);
+create index on downloads (user_id, downloaded_at desc);
+
+-- 7. Favoris
+create table favorites (
+  user_id uuid references profiles(id) on delete cascade,
+  product_id uuid references products(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, product_id)
+);
+
+-- 8. Licences / certificats
+create table licenses (
+  id uuid default gen_random_uuid() primary key,
+  license_number text unique not null,
+  user_id uuid references profiles(id) on delete cascade not null,
+  product_id uuid references products(id) on delete cascade not null,
+  certificate_url text,
+  issued_at timestamptz not null default now(),
+  unique (user_id, product_id)
+);
+
+-- 9. Paiements
+create table payments (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete set null,
+  plan_id uuid references plans(id),
+  chariow_payment_id text unique,
+  amount numeric(10,2),
+  currency text,
+  status text,                                -- succeeded | failed | refunded
+  created_at timestamptz not null default now()
+);
+
+-- 10. Événements webhook (idempotence)
+create table webhook_events (
+  id text primary key,                        -- identifiant d'événement du fournisseur
+  provider text not null default 'chariow',
+  event_type text,
+  payload jsonb,
+  processed_at timestamptz not null default now()
+);
+
+-- 11. Acceptation des conditions
+create table legal_acceptances (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  document text not null,                     -- 'cgu' | 'cgv' | 'privacy' | 'plr'
+  version text not null,
+  accepted_at timestamptz not null default now(),
+  ip_address inet
+);
+
+-- 12. Pages légales éditables
+create table legal_pages (
+  slug text primary key,
+  title text not null,
+  content_md text not null,
+  version text not null default '1.0',
+  updated_at timestamptz not null default now()
+);
+
+-- 13. Notifications et annonces
+create table notifications (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade,   -- null = pour tous
+  title text not null,
+  body text,
+  link text,
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- 14. Support
+create table support_tickets (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  subject text not null,
+  status text check (status in ('open','pending','closed')) default 'open',
+  created_at timestamptz not null default now()
+);
+create table support_messages (
+  id uuid default gen_random_uuid() primary key,
+  ticket_id uuid references support_tickets(id) on delete cascade not null,
+  sender_id uuid references profiles(id),
+  is_admin boolean not null default false,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+-- 15. Messages de contact et signalements
+create table contact_messages (
+  id uuid default gen_random_uuid() primary key,
+  name text, email text not null, subject text, message text not null,
+  is_handled boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create table content_reports (
+  id uuid default gen_random_uuid() primary key,
+  reporter_name text, reporter_email text not null,
+  product_id uuid references products(id) on delete set null,
+  description text not null,
+  status text default 'new',
+  created_at timestamptz not null default now()
+);
+
+-- 16. Blog
+create table blog_posts (
+  id uuid default gen_random_uuid() primary key,
+  title text not null, slug text unique not null,
+  content_md text not null, cover_url text,
+  is_published boolean not null default false,
+  published_at timestamptz
+);
+
+-- 17. Paramètres et audit
+create table app_settings (
+  key text primary key,
+  value jsonb not null
+);   -- ex: monthly_download_quota, support_email, whatsapp_number, maintenance_mode
+
+create table admin_audit_log (
+  id uuid default gen_random_uuid() primary key,
+  admin_id uuid references profiles(id),
+  action text not null,
+  target text,
+  created_at timestamptz not null default now()
+);
+
+-- ============ ROW LEVEL SECURITY (obligatoire) ============
+alter table profiles enable row level security;
+alter table subscriptions enable row level security;
+alter table plans enable row level security;
+alter table categories enable row level security;
+alter table products enable row level security;
+alter table downloads enable row level security;
+alter table favorites enable row level security;
+alter table licenses enable row level security;
+alter table payments enable row level security;
+alter table webhook_events enable row level security;
+alter table legal_acceptances enable row level security;
+alter table legal_pages enable row level security;
+alter table notifications enable row level security;
+alter table support_tickets enable row level security;
+alter table support_messages enable row level security;
+alter table contact_messages enable row level security;
+alter table content_reports enable row level security;
+alter table blog_posts enable row level security;
+alter table app_settings enable row level security;
+alter table admin_audit_log enable row level security;
+
+-- Profils : lecture/modification de son propre profil (sans pouvoir changer son rôle), admin voit tout
+create policy "profil_lecture" on profiles for select using (id = auth.uid() or is_admin());
+create policy "profil_maj" on profiles for update using (id = auth.uid())
+  with check (id = auth.uid() and role = (select role from profiles where id = auth.uid()));
+
+-- Abonnements : lecture de son propre abonnement ; écriture uniquement via service_role (webhook) ou admin
+create policy "abo_lecture" on subscriptions for select using (user_id = auth.uid() or is_admin());
+create policy "abo_admin" on subscriptions for all using (is_admin());
+
+-- Lecture publique : plans actifs, catégories, produits publiés, pages légales, articles publiés
+create policy "plans_public" on plans for select using (is_active or is_admin());
+create policy "cat_public" on categories for select using (true);
+create policy "prod_public" on products for select using (is_published or is_admin());
+create policy "legal_public" on legal_pages for select using (true);
+create policy "blog_public" on blog_posts for select using (is_published or is_admin());
+-- Écriture admin
+create policy "plans_admin" on plans for all using (is_admin());
+create policy "cat_admin" on categories for all using (is_admin());
+create policy "prod_admin" on products for all using (is_admin());
+create policy "legal_admin" on legal_pages for all using (is_admin());
+create policy "blog_admin" on blog_posts for all using (is_admin());
+
+-- Données personnelles : l'utilisateur voit les siennes, l'admin voit tout
+create policy "dl_lecture" on downloads for select using (user_id = auth.uid() or is_admin());
+create policy "fav_all" on favorites for all using (user_id = auth.uid());
+create policy "lic_lecture" on licenses for select using (user_id = auth.uid() or is_admin());
+create policy "pay_lecture" on payments for select using (user_id = auth.uid() or is_admin());
+create policy "legal_acc_lecture" on legal_acceptances for select using (user_id = auth.uid() or is_admin());
+create policy "legal_acc_insert" on legal_acceptances for insert with check (user_id = auth.uid());
+create policy "notif_lecture" on notifications for select using (user_id = auth.uid() or user_id is null or is_admin());
+create policy "notif_maj" on notifications for update using (user_id = auth.uid());
+create policy "notif_admin" on notifications for all using (is_admin());
+
+-- Support
+create policy "tick_lecture" on support_tickets for select using (user_id = auth.uid() or is_admin());
+create policy "tick_insert" on support_tickets for insert with check (user_id = auth.uid());
+create policy "tick_admin" on support_tickets for update using (is_admin());
+create policy "msg_lecture" on support_messages for select using (
+  is_admin() or exists (select 1 from support_tickets t where t.id = ticket_id and t.user_id = auth.uid()));
+create policy "msg_insert" on support_messages for insert with check (
+  is_admin() or exists (select 1 from support_tickets t where t.id = ticket_id and t.user_id = auth.uid()));
+
+-- Contact et signalements : insertion publique via route API (service_role), lecture admin
+create policy "contact_admin" on contact_messages for all using (is_admin());
+create policy "report_admin" on content_reports for all using (is_admin());
+
+-- Tables strictement serveur / admin
+create policy "settings_admin" on app_settings for all using (is_admin());
+create policy "audit_admin" on admin_audit_log for select using (is_admin());
+create policy "webhook_admin" on webhook_events for select using (is_admin());
+```
+
+**Notes pour l'agent** :
+- Les écritures sensibles (`subscriptions`, `payments`, `webhook_events`, `downloads`, `licenses`) se font **uniquement côté serveur** avec la clé `service_role`.
+- Lecture publique de `app_settings` : exposer uniquement les clés non sensibles via une route API dédiée.
+- Les fichiers ZIP ne sont jamais référencés par une URL publique : seule la clé `r2_file_key` est stockée.
+- Insérer un compte admin initial via script de seed (`scripts/seed-admin.ts`) et insérer les plans, catégories de départ et textes légaux de départ.
+
+## 9. API (routes serveur)
+
+| Route | Méthode | Rôle |
+|---|---|---|
+| `/api/chariow/checkout` | POST | Crée le paiement d'abonnement, renvoie l'URL de redirection |
+| `/api/chariow/webhook` | POST | Reçoit les événements Chariow (signature + idempotence) |
+| `/api/download` | POST | Vérifie accès + quota, renvoie URL signée R2 de 60 s |
+| `/api/admin/upload/zip` | POST | Renvoie une URL de téléversement signée vers R2 (admin) |
+| `/api/admin/upload/image` | POST | Signature d'upload Cloudinary (admin) |
+| `/api/upload/avatar` | POST | Signature d'upload Cloudinary pour l'avatar (membre) |
+| `/api/certificate/[productId]` | POST | Génère le certificat (PNG/PDF) |
+| `/api/contact` | POST | Enregistre un message de contact (anti-spam, rate limit) |
+| `/api/report` | POST | Enregistre un signalement de contenu |
+| `/api/emails/*` | interne | Fonctions d'envoi Brevo |
+| `/api/cron/expire-subscriptions` | GET | Tâche quotidienne protégée par secret : expiration + rappels |
+| `/api/cron/weekly-digest` | GET | Digest hebdomadaire des nouveautés |
+
+Toutes les entrées sont validées avec Zod. Réponses d'erreur normalisées `{ error, code }`.
+
+## 10. Sécurité (exigences non négociables)
+
+- RLS activé sur toutes les tables (voir section 8).
+- Clé `service_role`, clés R2, secret Cloudinary et secret webhook : **uniquement côté serveur**.
+- Vérification de signature des webhooks, idempotence.
+- URL de téléchargement signées de 60 s, jamais d'URL publique vers un ZIP.
+- Rate limiting sur : connexion, inscription, contact, téléchargement, signalement.
+- Protection CSRF, en-têtes de sécurité (CSP, X-Frame-Options, HSTS), cookies de session `httpOnly` et `secure`.
+- Validation et assainissement de tout contenu Markdown affiché (anti-XSS).
+- Contrôle de type et de taille des fichiers uploadés (ZIP côté R2, images côté Cloudinary).
+- Un utilisateur suspendu (`is_suspended`) ne peut plus se connecter ni télécharger.
+- Journal d'audit des actions admin.
+- Conformité données personnelles : export et suppression du compte à la demande.
+
+## 11. Performance et fiabilité
+
+- Rendu serveur (RSC) pour le catalogue, cache et revalidation ciblée.
+- Images servies via Cloudinary en `f_auto,q_auto`, `loading="lazy"`.
+- Pagination côté serveur, index SQL sur les colonnes filtrées.
+- Gestion d'erreur et reprise : si le webhook arrive avant le retour utilisateur, la page `/paiement/succes` interroge périodiquement le statut.
+- Journalisation des erreurs (ex. Sentry, plan gratuit).
+
+## 12. Limites des plans gratuits (à surveiller)
+
+- Supabase : pause d'un projet inactif après environ une semaine, base de 500 Mo. Prévoir un ping planifié ou passer au plan payant avant le lancement public.
+- R2 : 10 Go gratuits, à surveiller avec la croissance du catalogue.
+- Cloudinary : crédits mensuels limités, d'où l'usage réservé aux images optimisées.
+- Brevo : 300 e-mails par jour.
+
+## 13. Contenu de départ à générer (seed)
+
+- 4 catégories : Ebooks, Formations, Templates Canva, Scripts.
+- 2 plans : Mensuel et Annuel (prix paramétrables).
+- 6 produits fictifs de démonstration (images de substitution) pour tester l'interface.
+- Textes de départ des 9 pages légales (section 6.2).
+- FAQ de départ (15 questions environ), 3 témoignages fictifs clairement marqués comme exemples à remplacer.
+
+## 14. Critères d'acceptation
+
+1. Un visiteur peut parcourir toutes les pages publiques et légales depuis le footer.
+2. L'inscription exige l'acceptation des CGU/CGV/Confidentialité et enregistre cette acceptation.
+3. Un membre inactif voit le catalogue mais ne peut jamais obtenir d'URL de téléchargement (testé : appel direct à `/api/download` → 403).
+4. Après un paiement réussi (simulé par webhook signé), le statut passe à `active` et le badge devient vert sans rechargement manuel prolongé.
+5. Le même événement webhook envoyé deux fois ne prolonge l'abonnement qu'une fois.
+6. Un abonnement dont `current_period_end` est dépassé perd l'accès même si le statut n'a pas encore été mis à jour.
+7. Le quota mensuel bloque les téléchargements au-delà de la limite configurée.
+8. L'URL signée expire après 60 secondes.
+9. Un admin peut créer un produit complet (images vers Cloudinary, ZIP vers R2) et le publier.
+10. Un membre ne peut lire que ses propres données (testé avec la clé publique).
+11. Le certificat généré est vérifiable sur la page publique.
+12. Toutes les pages sont utilisables sur un écran de 360 px de large.
+13. Aucune clé secrète n'apparaît dans le code client ni dans le dépôt.
+
+## 15. Variables d'environnement (`.env.local`, à documenter dans `.env.example`)
+
+```
+NEXT_PUBLIC_APP_URL=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=vendix-files
+
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+CHARIOW_API_KEY=
+CHARIOW_WEBHOOK_SECRET=
+
+BREVO_API_KEY=
+BREVO_SENDER_EMAIL=
+BREVO_SENDER_NAME=Vendix
+
+CRON_SECRET=
+```
+
+## 16. Structure de projet suggérée
+
+```
+/app
+  (public)/ ...pages marketing et légales
+  (auth)/ ...inscription, connexion, etc.
+  dashboard/ ...espace membre
+  admin/ ...administration
+  api/ ...routes serveur
+/components  (ui, layout, catalogue, admin)
+/lib
+  supabase/ (client, server, admin)
+  storage/  (r2.ts, cloudinary.ts, index.ts)
+  payments/ (provider.ts, chariow.ts)
+  email/    (brevo.ts, templates)
+  quota.ts, access.ts, license.ts
+/scripts   (seed-admin.ts, seed-data.ts)
+/supabase  (migrations SQL)
+DECISIONS.md
+README.md
+```
+
+## 17. Ordre de construction demandé
+
+1. Initialisation du projet (Next.js, Tailwind, Shadcn, TypeScript), thème sombre, layouts public / dashboard / admin.
+2. Base de données : migrations SQL, RLS, trigger, seed.
+3. Authentification (inscription avec acceptation légale, connexion, réinitialisation, vérification e-mail, middleware).
+4. Pages publiques et **toutes les pages légales** (section 6.1 et 6.2), footer complet, bandeau cookies.
+5. Dashboard membre : catalogue, fiche produit, Dialog, favoris, nouveautés.
+6. Module de stockage (R2 + Cloudinary) et administration des produits.
+7. Paiement Chariow : checkout, webhook sécurisé, page succès/annulé, page abonnement.
+8. Téléchargement sécurisé, quota, historique.
+9. Certificat de licence et page de vérification publique.
+10. E-mails Brevo, notifications, tâches planifiées.
+11. Support, contact, signalements, aide.
+12. Reste de l'admin (utilisateurs, abonnements, paiements, annonces, pages légales, paramètres, blog).
+13. SEO, pages système (404, 500, maintenance), tests des critères d'acceptation, README et `.env.example`.
+
+À chaque étape terminée : lancer le build, corriger les erreurs, puis passer à la suivante.
+
+---
+*Fin du PRD Vendix v1.0 — les textes juridiques générés sont des modèles à faire valider par un juriste avant toute mise en production.*
