@@ -3,18 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 
 export function DotGridBackground() {
+  const [mousePos, setMousePos] = useState({ x: -1000, y: -1000, active: false });
   const [isDesktop, setIsDesktop] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Detect desktop pointer capability (mouse) and minimum viewport width
     const media = window.matchMedia("(hover: hover) and (pointer: fine) and (min-width: 768px)");
-    
-    const updateMode = () => {
-      setIsDesktop(media.matches);
-    };
+    setIsDesktop(media.matches);
 
-    updateMode();
+    const updateMode = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
     if (media.addEventListener) {
       media.addEventListener("change", updateMode);
       return () => media.removeEventListener("change", updateMode);
@@ -27,183 +24,214 @@ export function DotGridBackground() {
   useEffect(() => {
     if (!isDesktop) return;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d", { alpha: true });
-    if (!ctx) return;
-
-    // Grid configuration
-    const DOT_SPACING = 32;
-    const BASE_RADIUS = 0.85;
-    const GLOW_RADIUS = 160;
-    const PARALLAX = 6;
-    const LERP_SPEED = 0.08;
-
-    let width = window.innerWidth;
-    let height = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-    const mouse = { x: -1000, y: -1000, active: false };
-    const smooth = { x: -1000, y: -1000 };
-    let isRunning = false;
-    let animId = 0;
-    let idleFrames = 0;
-
-    const drawStatic = () => {
-      ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-      ctx.beginPath();
-      for (let x = DOT_SPACING / 2; x < width; x += DOT_SPACING) {
-        for (let y = DOT_SPACING / 2; y < height; y += DOT_SPACING) {
-          ctx.rect(x - BASE_RADIUS, y - BASE_RADIUS, BASE_RADIUS * 2, BASE_RADIUS * 2);
-        }
-      }
-      ctx.fill();
-    };
-
-    const resize = () => {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawStatic();
-    };
-
-    const loop = () => {
-      if (!ctx) return;
-
-      const targetX = mouse.active ? mouse.x : -1000;
-      const targetY = mouse.active ? mouse.y : -1000;
-      const dx = targetX - smooth.x;
-      const dy = targetY - smooth.y;
-
-      smooth.x += dx * LERP_SPEED;
-      smooth.y += dy * LERP_SPEED;
-
-      // Stop loop when mouse settles to save 100% CPU/GPU when idle
-      if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
-        idleFrames++;
-      } else {
-        idleFrames = 0;
-      }
-
-      if (idleFrames > 15) {
-        isRunning = false;
-        return;
-      }
-
-      ctx.clearRect(0, 0, width, height);
-
-      const offsetX = ((smooth.x - width / 2) / width) * PARALLAX;
-      const offsetY = ((smooth.y - height / 2) / height) * PARALLAX;
-
-      const startX = Math.floor((-offsetX) / DOT_SPACING) * DOT_SPACING;
-      const startY = Math.floor((-offsetY) / DOT_SPACING) * DOT_SPACING;
-
-      // 1. Fast batch draw of base dots
-      ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-      ctx.beginPath();
-      for (let x = startX; x < width + DOT_SPACING; x += DOT_SPACING) {
-        for (let y = startY; y < height + DOT_SPACING; y += DOT_SPACING) {
-          const dotX = x + offsetX;
-          const dotY = y + offsetY;
-          ctx.rect(dotX - BASE_RADIUS, dotY - BASE_RADIUS, BASE_RADIUS * 2, BASE_RADIUS * 2);
-        }
-      }
-      ctx.fill();
-
-      // 2. Localized cursor reactive glow (only checks nearby dots)
-      if (mouse.active && smooth.x > -500) {
-        const minX = smooth.x - GLOW_RADIUS;
-        const maxX = smooth.x + GLOW_RADIUS;
-        const minY = smooth.y - GLOW_RADIUS;
-        const maxY = smooth.y + GLOW_RADIUS;
-
-        for (let x = startX; x < width + DOT_SPACING; x += DOT_SPACING) {
-          const dotX = x + offsetX;
-          if (dotX < minX || dotX > maxX) continue;
-
-          for (let y = startY; y < height + DOT_SPACING; y += DOT_SPACING) {
-            const dotY = y + offsetY;
-            if (dotY < minY || dotY > maxY) continue;
-
-            const distSq = (dotX - smooth.x) * (dotX - smooth.x) + (dotY - smooth.y) * (dotY - smooth.y);
-            if (distSq < GLOW_RADIUS * GLOW_RADIUS) {
-              const dist = Math.sqrt(distSq);
-              const factor = 1 - dist / GLOW_RADIUS;
-              const radius = BASE_RADIUS + factor * 1.5;
-              const alpha = 0.08 + factor * 0.35;
-
-              ctx.fillStyle = `rgba(200, 255, 0, ${alpha})`;
-              ctx.beginPath();
-              ctx.arc(dotX, dotY, radius, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-        }
-      }
-
-      animId = requestAnimationFrame(loop);
-    };
-
-    const startLoop = () => {
-      if (!isRunning) {
-        isRunning = true;
-        idleFrames = 0;
-        animId = requestAnimationFrame(loop);
-      }
-    };
+    let rafId: number;
+    let targetX = -1000;
+    let targetY = -1000;
+    let currentX = -1000;
+    let currentY = -1000;
 
     const handleMouseMove = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      mouse.active = true;
-      startLoop();
+      targetX = e.clientX;
+      targetY = e.clientY;
+      if (!mousePos.active) {
+        setMousePos((prev) => ({ ...prev, active: true }));
+      }
     };
 
     const handleMouseLeave = () => {
-      mouse.active = false;
-      startLoop();
+      targetX = -1000;
+      targetY = -1000;
+      setMousePos((prev) => ({ ...prev, active: false }));
     };
 
-    resize();
-    window.addEventListener("resize", resize);
+    // Smooth lerp for desktop cursor spotlight
+    const tick = () => {
+      const dx = targetX - currentX;
+      const dy = targetY - currentY;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+        currentX += dx * 0.15;
+        currentY += dy * 0.15;
+        setMousePos({ x: Math.round(currentX), y: Math.round(currentY), active: true });
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     document.addEventListener("mouseleave", handleMouseLeave);
 
     return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener("resize", resize);
+      cancelAnimationFrame(rafId);
       window.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
     };
   }, [isDesktop]);
 
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-      {/* Mobile & Tablet: Ultra-lightweight native CSS pattern (0 canvas allocation, 0 JS loop, 0 crash) */}
-      {!isDesktop && (
+    <div
+      ref={containerRef}
+      aria-hidden="true"
+      className="fixed inset-0 pointer-events-none overflow-hidden select-none"
+      style={{ zIndex: 0 }}
+    >
+      {/* ========================================================
+          1. COUCHE LUMIÈRE EN MOUVEMENT (MOBILE & DESKTOP)
+          Animations GPU pures (translate3d) sans aucun filtre blur lourd
+         ======================================================== */}
+      <div className="absolute inset-0">
+        {/* Orbe Lumineux 1: Lime Vendix (#c8ff00) - Dérive diagonale */}
         <div
-          className="w-full h-full"
+          className="absolute w-[360px] h-[360px] sm:w-[550px] sm:h-[550px] rounded-full opacity-60"
           style={{
-            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
-            backgroundPosition: "center center",
+            top: "5%",
+            left: "15%",
+            background: "radial-gradient(circle, rgba(200, 255, 0, 0.22) 0%, rgba(200, 255, 0, 0.08) 45%, transparent 70%)",
+            animation: "driftOrb1 18s ease-in-out infinite alternate",
+            willChange: "transform",
+          }}
+        />
+
+        {/* Orbe Lumineux 2: Émeraude (#10b981) - Dérive basse */}
+        <div
+          className="absolute w-[320px] h-[320px] sm:w-[500px] sm:h-[500px] rounded-full opacity-50"
+          style={{
+            bottom: "10%",
+            right: "10%",
+            background: "radial-gradient(circle, rgba(16, 185, 129, 0.20) 0%, rgba(16, 185, 129, 0.06) 50%, transparent 70%)",
+            animation: "driftOrb2 24s ease-in-out infinite alternate",
+            willChange: "transform",
+          }}
+        />
+
+        {/* Orbe Lumineux 3: Cyan électrique (#06b6d4) - Mouvement doux central */}
+        <div
+          className="absolute w-[280px] h-[280px] sm:w-[450px] sm:h-[450px] rounded-full opacity-45"
+          style={{
+            top: "40%",
+            left: "45%",
+            background: "radial-gradient(circle, rgba(6, 182, 212, 0.18) 0%, rgba(6, 182, 212, 0.05) 50%, transparent 70%)",
+            animation: "driftOrb3 20s ease-in-out infinite alternate",
+            willChange: "transform",
+          }}
+        />
+
+        {/* Vague lumineuse (Light Wave Sweep) - Balayage régulier élégant */}
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            background: "linear-gradient(115deg, transparent 20%, rgba(200, 255, 0, 0.08) 45%, rgba(6, 182, 212, 0.06) 55%, transparent 80%)",
+            backgroundSize: "200% 200%",
+            animation: "lightWaveSweep 12s ease-in-out infinite",
+          }}
+        />
+      </div>
+
+      {/* ========================================================
+          2. SPOTLIGHT INTERACTIF DU CURSEUR (DESKTOP SEULEMENT)
+         ======================================================== */}
+      {isDesktop && mousePos.active && (
+        <div
+          className="absolute pointer-events-none rounded-full"
+          style={{
+            width: "380px",
+            height: "380px",
+            left: mousePos.x - 190,
+            top: mousePos.y - 190,
+            background: "radial-gradient(circle, rgba(200, 255, 0, 0.28) 0%, rgba(200, 255, 0, 0.10) 40%, transparent 70%)",
+            transition: "opacity 0.3s ease",
+            willChange: "transform",
           }}
         />
       )}
 
-      {/* Desktop: Interactive Canvas with idle sleep and hardware batching */}
-      {isDesktop && (
-        <canvas
-          ref={canvasRef}
-          className="w-full h-full"
-        />
-      )}
+      {/* ========================================================
+          3. GRILLE DE POINTS DE BASE (VISIBLE & NETTE)
+          Points blancs/argentés clairs et visibles (30px x 30px)
+         ======================================================== */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.16) 1.25px, transparent 1.25px)",
+          backgroundSize: "30px 30px",
+          backgroundPosition: "center center",
+        }}
+      />
+
+      {/* ========================================================
+          4. GRILLE DE POINTS BRILLANTS (NEON LIME HIGHLIGHTS)
+          Révélée par les zones de lumière pour l'effet "Whaou"
+         ======================================================== */}
+      <div
+        className="absolute inset-0 opacity-75"
+        style={{
+          backgroundImage: "radial-gradient(rgba(200, 255, 0, 0.50) 1.5px, transparent 1.5px)",
+          backgroundSize: "30px 30px",
+          backgroundPosition: "center center",
+          maskImage: "radial-gradient(ellipse at 50% 30%, black 15%, transparent 70%)",
+          WebkitMaskImage: "radial-gradient(ellipse at 50% 30%, black 15%, transparent 70%)",
+        }}
+      />
+
+      {/* Vignette sombre périphérique pour adoucir les bords de l'écran */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 35%, #050505 85%)",
+        }}
+      />
+
+      {/* ========================================================
+          KEYFRAMES CSS HAUTE PERFORMANCE (GPU COMPOSITOR)
+         ======================================================== */}
+      <style jsx>{`
+        @keyframes driftOrb1 {
+          0% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          50% {
+            transform: translate3d(80px, 90px, 0) scale(1.15);
+          }
+          100% {
+            transform: translate3d(-60px, 140px, 0) scale(0.92);
+          }
+        }
+
+        @keyframes driftOrb2 {
+          0% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          50% {
+            transform: translate3d(-100px, -70px, 0) scale(1.2);
+          }
+          100% {
+            transform: translate3d(50px, -120px, 0) scale(0.95);
+          }
+        }
+
+        @keyframes driftOrb3 {
+          0% {
+            transform: translate3d(0, 0, 0) scale(0.95);
+          }
+          50% {
+            transform: translate3d(-70px, 60px, 0) scale(1.1);
+          }
+          100% {
+            transform: translate3d(80px, -50px, 0) scale(1.05);
+          }
+        }
+
+        @keyframes lightWaveSweep {
+          0% {
+            background-position: 0% 0%;
+          }
+          50% {
+            background-position: 100% 100%;
+          }
+          100% {
+            background-position: 0% 0%;
+          }
+        }
+      `}</style>
     </div>
   );
 }
