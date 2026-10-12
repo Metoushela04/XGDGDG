@@ -37,7 +37,7 @@ export function ProductDialog({ product, isOpen, onClose, isSubscriber }: Produc
 
   const handleDownload = async () => {
     if (!isSubscriber) {
-      window.location.href = "/tarifs";
+      window.location.assign("/tarifs");
       return;
     }
 
@@ -63,8 +63,11 @@ export function ProductDialog({ product, isOpen, onClose, isSubscriber }: Produc
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } catch (err: any) {
-      setDownloadError(err.message || "Impossible de télécharger le fichier");
+      window.dispatchEvent(new CustomEvent("vendix:action", { detail: { message: "Votre téléchargement est prêt." } }));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Impossible de télécharger le fichier";
+      setDownloadError(message);
+      window.dispatchEvent(new CustomEvent("vendix:action", { detail: { message, error: true } }));
     } finally {
       setDownloading(false);
     }

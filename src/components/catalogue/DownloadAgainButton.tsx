@@ -17,7 +17,7 @@ export function DownloadAgainButton({ productId }: { productId: string }) {
       });
       const data = await res.json();
       if (!res.ok || !data.downloadUrl) {
-        alert(data.error || "Erreur lors du téléchargement");
+        window.dispatchEvent(new CustomEvent("vendix:action", { detail: { message: data.error || "Erreur lors du téléchargement", error: true } }));
         return;
       }
       const a = document.createElement("a");
@@ -25,8 +25,9 @@ export function DownloadAgainButton({ productId }: { productId: string }) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      window.dispatchEvent(new CustomEvent("vendix:action", { detail: { message: "Votre téléchargement est prêt." } }));
     } catch {
-      alert("Impossible de récupérer le fichier. Veuillez réessayer.");
+      window.dispatchEvent(new CustomEvent("vendix:action", { detail: { message: "Impossible de récupérer le fichier. Veuillez réessayer.", error: true } }));
     } finally {
       setLoading(false);
     }

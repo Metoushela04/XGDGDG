@@ -17,13 +17,13 @@ export function SubscribeButton({ planId, label }: { planId: string; label: stri
       });
       const data = await res.json();
       if (!res.ok || !data.checkoutUrl) {
-        alert(data.error || "Erreur lors de la préparation du paiement");
+        window.dispatchEvent(new CustomEvent("vendix:action", { detail: { message: data.error || "Erreur lors de la préparation du paiement", error: true } }));
         setLoading(false);
         return;
       }
       window.location.href = data.checkoutUrl;
     } catch {
-      alert("Erreur de connexion avec la passerelle de paiement");
+      window.dispatchEvent(new CustomEvent("vendix:action", { detail: { message: "Erreur de connexion avec la passerelle de paiement", error: true } }));
       setLoading(false);
     }
   };

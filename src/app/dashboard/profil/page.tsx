@@ -1,6 +1,6 @@
 // Profil utilisateur connecté à Supabase (PRD §5)
 import { createClient } from "@/lib/supabase/server";
-import { User, Mail, Calendar, Shield, Save } from "lucide-react";
+import { ProfileForm } from "@/components/dashboard/ProfileForm";
 import { revalidatePath } from "next/cache";
 
 export const revalidate = 0;
@@ -19,17 +19,22 @@ export default async function ProfilPage() {
 
   const handleUpdateProfile = async (formData: FormData) => {
     "use server";
-    const fullName = formData.get("fullName") as string;
+    const fullName = formData.get("fullName");
+    if (typeof fullName !== "string" || !fullName.trim() || fullName.trim().length > 100) {
+      return { error: "Nom invalide (1 à 100 caractères)." };
+    }
     const sb = await createClient();
     const { data: { user: currentUser } } = await sb.auth.getUser();
-    if (!currentUser) return;
+    if (!currentUser) return { error: "Session expirée. Reconnectez-vous." };
 
-    await sb
+    const { error } = await sb
       .from("profiles")
       .update({ full_name: fullName.trim() })
       .eq("id", currentUser.id);
 
+    if (error) return { error: "Mise à jour impossible. Réessayez." };
     revalidatePath("/dashboard/profil");
+    return {};
   };
 
   const memberSince = profile?.created_at
@@ -70,45 +75,7 @@ export default async function ProfilPage() {
         {/* Formulaire de modification */}
         <div className="sm:col-span-2 rounded-2xl border border-[#222222] bg-surface/50 p-6 space-y-5">
           <h2 className="font-display font-semibold text-base">Informations du compte</h2>
-          <form action={handleUpdateProfile} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1.5 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-accent" /> Nom complet
-              </label>
-              <input
-                type="text"
-                name="fullName"
-                defaultValue={profile?.full_name || ""}
-                placeholder="Votre nom complet"
-                className="w-full px-4 py-2.5 bg-surface2 border border-[#222222] rounded-xl text-sm focus:border-accent/50 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1.5 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-accent" /> Adresse e-mail (non modifiable)
-              </label>
-              <input
-                type="email"
-                disabled
-                value={user.email || ""}
-                className="w-full px-4 py-2.5 bg-surface2/50 border border-[#222222] rounded-xl text-sm text-muted cursor-not-allowed font-mono text-xs"
-              />
-            </div>
-
-            <div className="pt-2 flex items-center justify-between">
-              <div className="text-xs text-muted flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" /> Membre depuis {memberSince}
-              </div>
-              <button
-                type="submit"
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-accent text-background font-bold text-xs rounded-xl hover:bg-accent-dim transition-all"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>Enregistrer</span>
-              </button>
-            </div>
-          </form>
+          <ProfileForm fullName={profile?.full_name || ""} email={user.email || ""} memberSince={memberSince} save={handleUpdateProfile} />
         </div>
       </div>
     </div>

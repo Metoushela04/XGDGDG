@@ -33,9 +33,13 @@ export function ProductCard({ product, isSubscriber }: ProductCardProps) {
       const res = await toggleFavoriteAction(product.id);
       if (res.error) {
         setIsFav(!newFav); // Rollback
+        window.dispatchEvent(new CustomEvent("vendix:action", { detail: { message: res.error, error: true } }));
+      } else {
+        window.dispatchEvent(new CustomEvent("vendix:action", { detail: { message: newFav ? "Produit ajouté aux favoris." : "Produit retiré des favoris." } }));
       }
     } catch {
       setIsFav(!newFav);
+      window.dispatchEvent(new CustomEvent("vendix:action", { detail: { message: "Impossible de modifier vos favoris.", error: true } }));
     } finally {
       setFavLoading(false);
     }

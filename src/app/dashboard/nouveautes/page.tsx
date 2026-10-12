@@ -51,10 +51,11 @@ export default async function NouveautesPage() {
       file_size_bytes,
       file_list,
       created_at,
+      published_at,
       categories:category_id (name)
     `)
     .eq("is_published", true)
-    .order("created_at", { ascending: false })
+    .order("published_at", { ascending: false })
     .limit(16);
 
   const products: ProductItem[] = (rawProducts || []).map((p: any) => ({
@@ -67,7 +68,7 @@ export default async function NouveautesPage() {
     thumbnail_url: p.thumbnail_url,
     file_size_bytes: p.file_size_bytes,
     file_list: p.file_list || [],
-    created_at: p.created_at,
+    created_at: p.published_at || p.created_at,
     is_favorite: userFavoriteIds.has(p.id),
   }));
 
@@ -81,7 +82,7 @@ export default async function NouveautesPage() {
           </h1>
         </div>
         <p className="text-sm text-muted">
-          Les derniers kits, templates et ebooks ajoutés cette semaine
+          Les derniers kits, templates et ebooks publiés dans le catalogue
         </p>
       </div>
 
@@ -89,7 +90,7 @@ export default async function NouveautesPage() {
         <div className="rounded-2xl border border-[#222222] bg-surface/50 p-16 text-center max-w-xl mx-auto">
           <Package className="w-12 h-12 text-muted mx-auto mb-3 opacity-30" />
           <div className="font-display font-semibold text-lg text-text mb-1">
-            Aucun nouveau produit cette semaine
+            Aucun produit publié pour le moment
           </div>
           <p className="text-xs text-muted mb-6">
             Notre équipe ajoute régulièrement de nouvelles ressources prêtes à vendre. Revenez très bientôt !
