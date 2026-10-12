@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ShoppingBag, Search, Sparkles, Users,
+  ShoppingBag, Search, PackagePlus, Users,
   MessageCircle, Home, Menu, X, UserRound
 } from "lucide-react";
 import { SignOutButton } from "@/components/auth/SignOutButton";
@@ -15,7 +15,7 @@ import { DashboardNotifications } from "@/components/dashboard/DashboardNotifica
 const navItems = [
   { label: "Mes commandes", href: "/dashboard/commandes", icon: ShoppingBag },
   { label: "Espionnage", href: "/dashboard/espionnage", icon: Search },
-  { label: "Nouveautés", href: "/dashboard/nouveautes", icon: Sparkles },
+  { label: "Nouveautés", href: "/dashboard/nouveautes", icon: PackagePlus },
   { label: "Affiliation", href: "/dashboard/affiliation", icon: Users },
   { label: "Mon profil", href: "/dashboard/profil", icon: UserRound },
   { label: "Support", href: "/dashboard/support", icon: MessageCircle },

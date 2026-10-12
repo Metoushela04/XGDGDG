@@ -1,6 +1,6 @@
 // Gestion de l'abonnement membre Vendix (PRD §7.5)
 import { createClient } from "@/lib/supabase/server";
-import { CreditCard, Check, Sparkles, AlertCircle } from "lucide-react";
+import { CreditCard, Check, CircleCheck, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { SubscribeButton } from "@/components/payments/SubscribeButton";
 
@@ -63,7 +63,7 @@ export default async function AbonnementPage({
 
       {status === "success" && (
         <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm flex items-center gap-3">
-          <Sparkles className="w-5 h-5 shrink-0" />
+          <CircleCheck className="w-5 h-5 shrink-0" />
           <div>
             <div className="font-bold">Paiement validé avec succès !</div>
             <div className="text-xs text-green-300/80">

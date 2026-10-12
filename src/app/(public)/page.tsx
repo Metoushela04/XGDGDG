@@ -7,10 +7,10 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { GlowEffect } from "@/components/ui/GlowEffect";
 import { SpotlightCard } from "@/components/ui/SpotlightCard";
-import { Package, DollarSign, Smartphone, Shield, Sparkles, Headphones, Check } from "lucide-react";
+import { Package, DollarSign, Smartphone, Shield, PackagePlus, Headphones, Check } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Package, DollarSign, Smartphone, Shield, Sparkles, Headphones,
+  Package, DollarSign, Smartphone, Shield, PackagePlus, Headphones,
 };
 
 export default function LandingPage() {
@@ -159,7 +159,7 @@ function Features() {
     { icon: "DollarSign", title: "100% des revenus", description: "Vous gardez tout ce que vous gagnez. Pas de commission, pas de partage." },
     { icon: "Smartphone", title: "Mobile-first", description: "Plateforme optimisée pour mobile. Gérez votre business depuis votre téléphone." },
     { icon: "Shield", title: "Licence PLR", description: "Droit de revente complet. Modifiez, rebrandez, redistribuez comme bon vous semble." },
-    { icon: "Sparkles", title: "Catalogue vivant", description: "Nouveaux produits ajoutés chaque semaine. Votre stock ne cesse de croître." },
+    { icon: "PackagePlus", title: "Catalogue vivant", description: "Nouveaux produits ajoutés chaque semaine. Votre stock ne cesse de croître." },
     { icon: "Headphones", title: "Support dédié", description: "Équipe disponible pour vous accompagner. Guides, tutoriels, assistance." },
   ];
 

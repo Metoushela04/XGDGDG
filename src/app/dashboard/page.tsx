@@ -9,7 +9,7 @@ import {
   Heart,
   Package,
   ArrowRight,
-  Sparkles,
+  Crown,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -101,7 +101,7 @@ export default async function DashboardPage() {
             href="/tarifs"
             className="flex items-center gap-2 px-5 py-2.5 bg-accent text-background font-bold text-xs rounded-xl hover:bg-accent-dim transition-all shadow-sm"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Crown className="w-3.5 h-3.5" />
             <span>Activer l&apos;accès VIP</span>
           </Link>
         )}

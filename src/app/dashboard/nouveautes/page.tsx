@@ -2,7 +2,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ProductCard } from "@/components/catalogue/ProductCard";
 import { ProductItem } from "@/components/catalogue/ProductDialog";
-import { Sparkles, Package } from "lucide-react";
+import { PackagePlus, Package } from "lucide-react";
 import Link from "next/link";
 
 export const revalidate = 0;
@@ -76,7 +76,7 @@ export default async function NouveautesPage() {
     <div className="space-y-8">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-5 h-5 text-accent" />
+          <PackagePlus className="w-5 h-5 text-accent" />
           <h1 className="font-display text-2xl sm:text-3xl font-bold">
             Dernières <span className="text-accent">nouveautés</span>
           </h1>
