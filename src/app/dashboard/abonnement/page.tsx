@@ -39,7 +39,7 @@ export default async function AbonnementPage({
 
   const isSubActive =
     sub?.status === "active" &&
-    (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
+    (!!sub.current_period_end && new Date(sub.current_period_end) > new Date());
 
   const daysRemaining = sub?.current_period_end
     ? Math.max(
@@ -61,13 +61,13 @@ export default async function AbonnementPage({
         <p className="text-sm text-muted">Gérez votre plan VIP et votre facturation</p>
       </div>
 
-      {status === "success" && (
+      {(status === "pending" || status === "success") && (
         <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm flex items-center gap-3">
           <CircleCheck className="w-5 h-5 shrink-0" />
           <div>
-            <div className="font-bold">Paiement validé avec succès !</div>
+            <div className="font-bold">Paiement en attente de confirmation</div>
             <div className="text-xs text-green-300/80">
-              Votre accès VIP est actif. Vous pouvez dès maintenant explorer le catalogue et télécharger sans limite.
+              Votre accès ne sera actif qu’après confirmation du paiement par Chariow. Actualisez cette page dans quelques instants. Ne vous fiez pas à la redirection seule.
             </div>
           </div>
         </div>
@@ -109,7 +109,7 @@ export default async function AbonnementPage({
           <div className="pt-6 space-y-4">
             <div className="grid sm:grid-cols-2 gap-4 text-xs text-muted">
               <div>
-                <span className="font-medium text-text">Prochain renouvellement / fin :</span>{" "}
+                <span className="font-medium text-text">Fin de la période payée :</span>{" "}
                 {sub?.current_period_end
                   ? new Date(sub.current_period_end).toLocaleDateString("fr-FR", {
                       day: "numeric",
@@ -136,7 +136,7 @@ export default async function AbonnementPage({
           <div className="pt-6 space-y-4">
             <p className="text-sm text-muted">
               Abonnez-vous à Vendix pour débloquer l&apos;accès immédiat à l&apos;intégralité du catalogue,
-              télécharger sans limite et revendre les produits avec 100% des bénéfices pour vous.
+              télécharger selon le quota mensuel et revendre les produits avec 100% des bénéfices pour vous.
             </p>
 
             {/* Plans de souscription */}
@@ -166,7 +166,7 @@ export default async function AbonnementPage({
                       <p className="text-[11px] text-muted mt-1">
                         {isYearly
                           ? "Facturé 228$/an en une fois. Mobile Money & Carte."
-                          : "Paiement mensuel sans engagement."}
+                          : "Accès de 30 jours, à renouveler manuellement."}
                       </p>
                     </div>
 

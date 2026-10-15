@@ -33,7 +33,7 @@ export default async function MemberCataloguePage({ searchParams }: CataloguePag
 
     if (
       sub?.status === "active" &&
-      (!sub.current_period_end || new Date(sub.current_period_end) > new Date())
+      (!!sub.current_period_end && new Date(sub.current_period_end) > new Date())
     ) {
       isSubscriber = true;
     }
@@ -122,7 +122,7 @@ export default async function MemberCataloguePage({ searchParams }: CataloguePag
             href="/tarifs"
             className="px-5 py-2.5 bg-accent text-background font-bold text-xs rounded-xl hover:bg-accent-dim transition-all shadow-sm"
           >
-            Activer mon accès VIP illimité
+            Activer mon accès VIP
           </Link>
         )}
       </div>

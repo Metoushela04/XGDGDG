@@ -11,20 +11,24 @@ const DEFAULT_MONTHLY_QUOTA = 30;
 export async function getMonthlyQuotaLimit(): Promise<number> {
   const adminClient = createAdminClient();
   try {
-    const { data } = await adminClient
+    const { data, error } = await adminClient
       .from("app_settings")
       .select("value")
       .eq("key", "monthly_download_quota")
       .single();
 
-    if (data && typeof data.value === "number") {
+    if (error && error.code !== "PGRST116") throw error;
+    if (data && typeof data.value === "number" && Number.isInteger(data.value) && data.value >= 0) {
       return data.value;
     }
-    if (data && data.value && typeof data.value.limit === "number") {
+    if (data && data.value && typeof data.value.limit === "number" &&
+      Number.isInteger(data.value.limit) && data.value.limit >= 0) {
       return data.value.limit;
     }
-  } catch {
-    // Fallback par défaut
+    if (data) throw new Error("Configuration de quota invalide");
+  } catch (error) {
+    // Never display a fabricated safe quota if the database is unavailable.
+    throw error;
   }
   return DEFAULT_MONTHLY_QUOTA;
 }
@@ -36,22 +40,9 @@ export async function getMonthlyQuotaLimit(): Promise<number> {
 export async function getUserMonthlyDistinctDownloadsCount(userId: string): Promise<number> {
   const adminClient = createAdminClient();
 
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-  const { data, error } = await adminClient
-    .from("downloads")
-    .select("product_id")
-    .eq("user_id", userId)
-    .gte("downloaded_at", startOfMonth);
-
-  if (error || !data) {
-    return 0;
-  }
-
-  // Set pour décompter les produits distincts
-  const distinctProductIds = new Set(data.map((d) => d.product_id));
-  return distinctProductIds.size;
+  const { data, error } = await adminClient.rpc("monthly_download_count", { p_user: userId });
+  if (error || typeof data !== "number") throw error || new Error("Quota indisponible");
+  return data;
 }
 
 /**
@@ -61,7 +52,7 @@ export async function hasDownloadedProductThisMonth(userId: string, productId: s
   const adminClient = createAdminClient();
 
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 
   const { data, error } = await adminClient
     .from("downloads")
@@ -71,11 +62,8 @@ export async function hasDownloadedProductThisMonth(userId: string, productId: s
     .gte("downloaded_at", startOfMonth)
     .limit(1);
 
-  if (error || !data || data.length === 0) {
-    return false;
-  }
-
-  return true;
+  if (error || !data) throw error || new Error("Quota indisponible");
+  return data.length > 0;
 }
 
 /**

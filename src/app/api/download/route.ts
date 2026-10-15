@@ -1,144 +1,66 @@
-// Route de téléchargement sécurisé de produits PLR (PRD §7.3)
+// Entitlement, quota, and audit are committed atomically before returning a signed R2 URL.
 import { NextRequest, NextResponse } from "next/server";
+import { isIP } from "node:net";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkAccess } from "@/lib/access";
-import { checkUserQuota } from "@/lib/quota";
-import { getSignedDownloadUrl } from "@/lib/storage/r2";
+import { getSignedDownloadUrl, getFileMeta } from "@/lib/storage/r2";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request";
 
-const downloadSchema = z.object({
-  productId: z.string().uuid("Identifiant de produit invalide"),
-});
+const schema = z.object({ productId: z.string().uuid() });
 
 export async function POST(req: NextRequest) {
-  // 1. Rate limiting (anti-abus / anti-moissonnage)
-  const clientIp = await getClientIp();
-  const limiter = rateLimit(`download:${clientIp}`, 30, 60 * 1000); // max 30 requêtes par minute
-  if (!limiter.ok) {
-    return NextResponse.json(
-      { error: "Trop de requêtes. Veuillez patienter un instant.", code: "RATE_LIMITED" },
-      { status: 429 }
-    );
-  }
+  const parsed = schema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Produit invalide" }, { status: 400 });
 
-  // 2. Validation du payload
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Format JSON invalide", code: "INVALID_JSON" },
-      { status: 400 }
-    );
-  }
-
-  const parsed = downloadSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message || "Données invalides", code: "VALIDATION_ERROR" },
-      { status: 400 }
-    );
-  }
-
-  const { productId } = parsed.data;
-
-  // 3. Vérification de l'authentification et de l'abonnement
   const access = await checkAccess();
   if (!access.allowed) {
-    if (access.reason === "unauthenticated") {
-      return NextResponse.json(
-        { error: "Vous devez être connecté pour télécharger", code: "UNAUTHORIZED" },
-        { status: 401 }
-      );
-    }
-    if (access.reason === "suspended") {
-      return NextResponse.json(
-        { error: "Votre compte est suspendu. Veuillez contacter le support.", code: "SUSPENDED" },
-        { status: 403 }
-      );
-    }
     return NextResponse.json(
-      {
-        error: "Un abonnement actif est requis pour télécharger ce produit",
-        code: "SUBSCRIPTION_REQUIRED",
-      },
-      { status: 403 }
+      { error: access.reason === "unauthenticated" ? "Connexion requise" : "Abonnement actif requis", code: access.reason },
+      { status: access.reason === "unauthenticated" ? 401 : 403 }
     );
   }
-
-  const userId = access.userId;
-
-  // 4. Vérification du quota mensuel (un même produit re-téléchargé est gratuit)
-  const quota = await checkUserQuota(userId, productId);
-  if (!quota.allowed) {
-    return NextResponse.json(
-      {
-        error: `Quota mensuel de téléchargements atteint (${quota.used}/${quota.limit}). Votre quota se renouvelle le 1er du mois prochain.`,
-        code: "QUOTA_EXCEEDED",
-        used: quota.used,
-        limit: quota.limit,
-      },
-      { status: 403 }
-    );
+  const ip = await getClientIp();
+  if (!rateLimit(`download:${access.userId}:${ip}`, 30, 60_000).ok) {
+    return NextResponse.json({ error: "Trop de demandes de téléchargement" }, { status: 429 });
   }
 
-  // 5. Récupération du produit avec la clé R2 (via adminClient car r2_file_key n'est pas lisible par le client)
-  const adminClient = createAdminClient();
-  const { data: product, error: prodError } = await adminClient
-    .from("products")
-    .select("id, title, r2_file_key, is_published")
-    .eq("id", productId)
-    .single();
-
-  if (prodError || !product) {
-    return NextResponse.json(
-      { error: "Produit introuvable", code: "PRODUCT_NOT_FOUND" },
-      { status: 404 }
-    );
+  const admin = createAdminClient();
+  const { data: product, error: productError } = await admin.from("products")
+    .select("id,r2_file_key,is_published").eq("id", parsed.data.productId).maybeSingle();
+  if (productError) return NextResponse.json({ error: "Catalogue indisponible" }, { status: 503 });
+  if (!product?.is_published || !product.r2_file_key) {
+    return NextResponse.json({ error: "Produit indisponible" }, { status: 404 });
   }
 
-  if (!product.is_published) {
-    return NextResponse.json(
-      { error: "Ce produit n'est pas encore disponible", code: "PRODUCT_NOT_PUBLISHED" },
-      { status: 404 }
-    );
-  }
-
-  if (!product.r2_file_key) {
-    return NextResponse.json(
-      { error: "Fichier du produit indisponible", code: "FILE_MISSING" },
-      { status: 500 }
-    );
-  }
-
-  // 6. Génération de l'URL signée R2 (60 secondes)
-  let downloadUrl: string;
   try {
-    downloadUrl = await getSignedDownloadUrl(product.r2_file_key, 60);
-  } catch (err: any) {
-    console.error("Erreur génération URL R2:", err);
-    return NextResponse.json(
-      { error: "Impossible de générer le lien de téléchargement. Réessayez.", code: "STORAGE_ERROR" },
-      { status: 500 }
-    );
+    const file = await getFileMeta(product.r2_file_key);
+    if (!file.exists) return NextResponse.json({ error: "Archive indisponible" }, { status: 404 });
+    // Sign first, but do not expose the URL until Postgres has reserved the download.
+    const downloadUrl = await getSignedDownloadUrl(product.r2_file_key, 60);
+    const { data, error } = await admin.rpc("reserve_product_download", {
+      p_user: access.userId,
+      p_product: product.id,
+      p_ip: isIP(ip) ? ip : null,
+      p_user_agent: req.headers.get("user-agent") || "",
+    });
+    if (error || !data?.length) {
+      console.error("[download] Reservation impossible:", error?.message);
+      return NextResponse.json({ error: "Téléchargement temporairement indisponible" }, { status: 503 });
+    }
+    const result = data[0] as { allowed: boolean; reason: string; used: number; quota_limit: number; is_redownload: boolean };
+    if (!result.allowed) {
+      const status = result.reason === "PRODUCT_NOT_FOUND" ? 404 : 403;
+      return NextResponse.json({
+        error: result.reason === "QUOTA_EXCEEDED" ? "Quota mensuel atteint" : "Accès refusé",
+        code: result.reason, used: result.used, limit: result.quota_limit,
+      }, { status });
+    }
+    return NextResponse.json({ success: true, downloadUrl, expiresIn: 60, isRedownload: result.is_redownload },
+      { headers: { "Cache-Control": "private, no-store" } });
+  } catch (err) {
+    console.error("[download] Stockage indisponible:", err);
+    return NextResponse.json({ error: "Archive temporairement indisponible" }, { status: 503 });
   }
-
-  // 7. Enregistrement dans la table downloads
-  const userAgent = req.headers.get("user-agent") || undefined;
-  await adminClient.from("downloads").insert({
-    user_id: userId,
-    product_id: productId,
-    ip_address: clientIp || null,
-    user_agent: userAgent ? userAgent.slice(0, 500) : null,
-  });
-
-  return NextResponse.json({
-    success: true,
-    downloadUrl,
-    expiresIn: 60,
-    isRedownload: quota.isRedownload,
-  });
 }

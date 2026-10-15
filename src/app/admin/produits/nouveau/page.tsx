@@ -98,12 +98,12 @@ export default function NewProductPage() {
       if (cldData.secure_url) {
         setThumbnailUrl(cldData.secure_url);
       } else {
-        // Fallback local mock en dev
-        setThumbnailUrl(URL.createObjectURL(file));
+        throw new Error("La miniature n’a pas été confirmée par Cloudinary");
       }
     } catch (err: any) {
-      console.warn("Échec upload Cloudinary, fallback local:", err.message);
-      setThumbnailUrl(URL.createObjectURL(file));
+      console.error("Échec upload Cloudinary:", err);
+      setThumbnailUrl("");
+      setError("Téléversement de la miniature impossible. Réessayez avant de publier.");
     } finally {
       setImageUploading(false);
     }
@@ -111,6 +111,10 @@ export default function NewProductPage() {
 
   // Upload ZIP vers Cloudflare R2
   const handleZipUpload = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".zip") || file.size === 0 || file.size > 500_000_000) {
+      setError("Sélectionnez un ZIP non vide de moins de 500 Mo.");
+      return;
+    }
     setZipUploading(true);
     setZipProgress(10);
     setError(null);
@@ -142,10 +146,10 @@ export default function NewProductPage() {
       setZipProgress(100);
       setR2Key(data.key);
     } catch (err: any) {
-      console.warn("Échec upload R2 réel, mode dev simulé:", err.message);
-      // Simulation pour environnement de dev sans clés S3 actives
-      setR2Key(`products/dev-${Date.now()}-${file.name}`);
-      setZipProgress(100);
+      console.error("Échec upload R2:", err);
+      setR2Key("");
+      setZipProgress(0);
+      setError("Téléversement de l’archive impossible. Aucun fichier fictif ne sera publié.");
     } finally {
       setZipUploading(false);
     }

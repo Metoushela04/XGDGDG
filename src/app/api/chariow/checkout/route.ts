@@ -1,94 +1,78 @@
-// Route de création de session de paiement Chariow (PRD §7.5, §9)
+// A checkout is only a payment attempt; access is granted by a verified Pulse.
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chariow } from "@/lib/payments/chariow";
+import { rateLimit } from "@/lib/rate-limit";
+import { readLimitedBody } from "@/lib/payments/read-body";
 
-const checkoutSchema = z.object({
-  planId: z.string().uuid("Identifiant de plan invalide"),
+const schema = z.object({
+  planId: z.string().uuid(),
+  phoneNumber: z.string().regex(/^\d{6,15}$/),
+  countryCode: z.string().regex(/^[A-Z]{2}$/),
 });
 
 export async function POST(req: NextRequest) {
-  // 1. Authentification
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json(
-      { error: "Vous devez être connecté pour vous abonner", code: "UNAUTHORIZED" },
-      { status: 401 }
-    );
+  if (authError || !user || !user.email_confirmed_at || !user.email) {
+    return NextResponse.json({ error: "Connexion et e-mail vérifié requis" }, { status: 401 });
   }
-
-  // 2. Validation
+  if (!rateLimit(`checkout:${user.id}`, 5, 10 * 60_000).ok) {
+    return NextResponse.json({ error: "Trop de tentatives. Réessayez dans quelques minutes." }, { status: 429 });
+  }
+  const raw = await readLimitedBody(req, 4096);
+  if (!raw) return NextResponse.json({ error: "Requête trop volumineuse" }, { status: 413 });
   let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Format JSON invalide", code: "INVALID_JSON" },
-      { status: 400 }
-    );
+  try { body = JSON.parse(raw.toString("utf8")); }
+  catch { return NextResponse.json({ error: "JSON invalide" }, { status: 400 }); }
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "Plan ou numéro de téléphone invalide" }, { status: 400 });
+  if (!process.env.CHARIOW_API_KEY || !process.env.CHARIOW_PULSE_SECRET) {
+    return NextResponse.json({ error: "Paiement temporairement indisponible" }, { status: 503 });
+  }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl || (process.env.NODE_ENV === "production" && !appUrl.startsWith("https://"))) {
+    return NextResponse.json({ error: "URL publique du site non configurée" }, { status: 503 });
   }
 
-  const parsed = checkoutSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message || "Données invalides", code: "VALIDATION_ERROR" },
-      { status: 400 }
-    );
+  const admin = createAdminClient();
+  const [{ data: profile, error: profileError }, { data: plan, error: planError }] = await Promise.all([
+    admin.from("profiles").select("full_name, is_suspended").eq("id", user.id).single(),
+    admin.from("plans").select("id,code,name,currency,is_active,chariow_product_id")
+      .eq("id", parsed.data.planId).single(),
+  ]);
+  if (profileError || !profile || profile.is_suspended) {
+    return NextResponse.json({ error: "Compte non autorisé" }, { status: 403 });
+  }
+  if (planError || !plan || !plan.is_active || !plan.chariow_product_id) {
+    return NextResponse.json({ error: "Plan indisponible ou non configuré chez Chariow" }, { status: 503 });
   }
 
-  const { planId } = parsed.data;
-
-  // 3. Récupération du plan actif
-  const adminClient = createAdminClient();
-  const { data: plan, error: planError } = await adminClient
-    .from("plans")
-    .select("id, code, name, price_amount, currency, duration_days, is_active")
-    .eq("id", planId)
-    .single();
-
-  if (planError || !plan || !plan.is_active) {
-    return NextResponse.json(
-      { error: "Plan d'abonnement introuvable ou inactif", code: "PLAN_NOT_FOUND" },
-      { status: 404 }
-    );
+  const { data: intent, error: intentError } = await admin.from("checkout_intents")
+    .insert({ user_id: user.id, plan_id: plan.id }).select("id").single();
+  if (intentError || !intent) {
+    return NextResponse.json({ error: "Impossible de préparer le paiement" }, { status: 503 });
   }
-
-  // Récupérer le nom du profil
-  const { data: profile } = await adminClient
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .single();
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
   try {
     const result = await chariow.createCheckout({
-      planId: plan.id,
-      planCode: plan.code as "monthly" | "yearly",
-      planName: plan.name,
-      amount: Number(plan.price_amount),
-      currency: plan.currency || "USD",
-      userId: user.id,
-      userEmail: user.email || "",
-      fullName: profile?.full_name || undefined,
-      successUrl: `${appUrl}/dashboard/abonnement?status=success`,
-      cancelUrl: `${appUrl}/tarifs?status=canceled`,
+      productId: plan.chariow_product_id,
+      userEmail: user.email,
+      fullName: profile.full_name || undefined,
+      phoneNumber: parsed.data.phoneNumber,
+      countryCode: parsed.data.countryCode,
+      currency: plan.currency,
+      orderRef: intent.id,
+      redirectUrl: `${appUrl.replace(/\/$/, "")}/dashboard/abonnement?status=pending&sale={sale_id}`,
     });
-
-    return NextResponse.json({
-      success: true,
-      checkoutUrl: result.checkoutUrl,
-    });
-  } catch (err: any) {
-    console.error("Erreur checkout Chariow:", err);
-    return NextResponse.json(
-      { error: err.message || "Erreur lors de la création de la session de paiement", code: "PAYMENT_ERROR" },
-      { status: 500 }
-    );
+    const { error } = await admin.from("checkout_intents").update({ chariow_sale_id: result.saleId })
+      .eq("id", intent.id).is("chariow_sale_id", null);
+    // An early webhook can already have filled the sale id; the verified event stays authoritative.
+    if (error) throw error;
+    return NextResponse.json({ checkoutUrl: result.checkoutUrl }, { headers: { "Cache-Control": "no-store" } });
+  } catch (err) {
+    console.error("[chariow checkout]", err);
+    return NextResponse.json({ error: "Paiement indisponible. Aucun accès n’a été activé." }, { status: 502 });
   }
 }

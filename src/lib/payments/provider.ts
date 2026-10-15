@@ -1,43 +1,24 @@
-// Interface d'abstraction des paiements (PRD §7.5)
 import "server-only";
 
+// Period-fixed Chariow checkout. Renewals require another verified sale.
 export interface CheckoutOptions {
-  planId: string;
-  planCode: "monthly" | "yearly";
-  planName: string;
-  amount: number;
-  currency: string;
-  userId: string;
+  productId: string;
   userEmail: string;
   fullName?: string;
-  successUrl: string;
-  cancelUrl: string;
+  countryCode: string;
+  phoneNumber: string;
+  orderRef: string;
+  currency: string;
+  redirectUrl: string;
 }
 
 export interface CheckoutResult {
   checkoutUrl: string;
-  sessionId?: string;
-}
-
-export interface WebhookResult {
-  valid: boolean;
-  event?: {
-    id: string;
-    type: "payment.succeeded" | "payment.failed" | "subscription.canceled" | "subscription.renewed" | string;
-    userId?: string;
-    planId?: string;
-    chariowPaymentId?: string;
-    chariowSubId?: string;
-    amount?: number;
-    currency?: string;
-    currentPeriodEnd?: string;
-    rawPayload: unknown;
-  };
-  error?: string;
+  saleId: string;
 }
 
 export interface PaymentProvider {
   name: string;
   createCheckout(options: CheckoutOptions): Promise<CheckoutResult>;
-  verifyAndParseWebhook(rawBody: string, signature: string | null): Promise<WebhookResult>;
+  verifyPulseSignature(rawBody: Buffer, signature: string | null): boolean;
 }

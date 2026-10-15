@@ -23,7 +23,7 @@ export default async function NouveautesPage() {
 
     if (
       sub?.status === "active" &&
-      (!sub.current_period_end || new Date(sub.current_period_end) > new Date())
+      (!!sub.current_period_end && new Date(sub.current_period_end) > new Date())
     ) {
       isSubscriber = true;
     }

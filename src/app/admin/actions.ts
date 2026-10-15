@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkAdmin } from "@/lib/access";
+import { getFileMeta } from "@/lib/storage/r2";
 
 export async function createProductAction(formData: {
   title: string;
@@ -24,6 +25,18 @@ export async function createProductAction(formData: {
     return { error: "Action non autorisée" };
   }
 
+  // Never publish a browser-local blob URL or a fictitious/unuploaded R2 key.
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  let thumbnail: URL;
+  try { thumbnail = new URL(formData.thumbnailUrl); }
+  catch { return { error: "Miniature invalide" }; }
+  if (!cloudName || thumbnail.protocol !== "https:" || thumbnail.hostname !== "res.cloudinary.com" ||
+      !thumbnail.pathname.startsWith(`/${cloudName}/`)) return { error: "Miniature Cloudinary requise" };
+  if (!/^products\/[a-zA-Z0-9._-]+\.zip$/i.test(formData.r2FileKey)) return { error: "Clé d'archive ZIP invalide" };
+  const uploadedFile = await getFileMeta(formData.r2FileKey);
+  if (!uploadedFile.exists || uploadedFile.size < 1 || uploadedFile.size > 500_000_000) {
+    return { error: "L'archive R2 n'existe pas ou sa taille est invalide" };
+  }
   const adminClient = createAdminClient();
 
   const { data, error } = await adminClient
@@ -37,7 +50,7 @@ export async function createProductAction(formData: {
       thumbnail_url: formData.thumbnailUrl,
       preview_images: formData.previewImages,
       r2_file_key: formData.r2FileKey,
-      file_size_bytes: formData.fileSizeBytes,
+      file_size_bytes: uploadedFile.size,
       file_list: formData.fileList,
       is_featured: formData.isFeatured,
       is_published: formData.isPublished,
@@ -69,6 +82,13 @@ export async function togglePublishProductAction(productId: string, isPublished:
   if (!adminCheck.isAdmin) return { error: "Non autorisé" };
 
   const adminClient = createAdminClient();
+  if (isPublished) {
+    const { data: product, error: lookupError } = await adminClient.from("products")
+      .select("r2_file_key").eq("id", productId).single();
+    if (lookupError || !product?.r2_file_key) return { error: "Archive ZIP absente" };
+    const file = await getFileMeta(product.r2_file_key);
+    if (!file.exists || file.size < 1) return { error: "Archive R2 introuvable : publication refusée" };
+  }
   const { error } = await adminClient
     .from("products")
     .update({ is_published: isPublished })

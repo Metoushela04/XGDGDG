@@ -293,7 +293,7 @@ function Pricing() {
             <ul className="space-y-2.5 md:space-y-3 mb-6 md:mb-8">
               {[
                 "Accès complet au catalogue",
-                "Téléchargements illimités",
+                "30 nouveaux produits par mois",
                 "Nouveautés chaque semaine",
                 "Licence PLR complète",
               ].map((item) => (

@@ -24,7 +24,7 @@ export default async function FavorisPage() {
 
   const isSubscriber =
     sub?.status === "active" &&
-    (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
+    (!!sub.current_period_end && new Date(sub.current_period_end) > new Date());
 
   // Récupérer les favoris avec les détails des produits
   const { data: rawFavs } = await supabase

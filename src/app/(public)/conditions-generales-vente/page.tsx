@@ -4,7 +4,7 @@ import { LegalPage } from "../legal-templates";
 
 export default function CGVPage() {
   return (
-    <LegalPage title="Conditions Générales de Vente" lastUpdated="4 octobre 2026">
+    <LegalPage title="Conditions Générales de Vente" lastUpdated="16 octobre 2026">
       <section>
         <h2 className="font-display text-xl font-semibold text-text">1. Description du service</h2>
         <p>
@@ -20,17 +20,17 @@ export default function CGVPage() {
           Deux formules d'abonnement sont disponibles :
         </p>
         <ul className="list-disc pl-6 space-y-1">
-          <li>Plan mensuel : 29 USD/mois, renouvelable automatiquement</li>
-          <li>Plan annuel : 228 USD/an (soit 19 USD/mois), renouvelable automatiquement</li>
+          <li>Plan 30 jours : 29 USD par période, renouvellement manuel</li>
+          <li>Plan 365 jours : 228 USD par période (soit 19 USD/mois), renouvellement manuel</li>
         </ul>
         <p>Les prix peuvent être modifiés avec un préavis de 30 jours.</p>
       </section>
 
       <section>
-        <h2 className="font-display text-xl font-semibold text-text">3. Renouvellement automatique</h2>
+        <h2 className="font-display text-xl font-semibold text-text">3. Renouvellement manuel</h2>
         <p>
-          L'abonnement se renouvelle automatiquement à la fin de chaque période, sauf
-          annulation par l'utilisateur avant la date de renouvellement.
+          Aucun paiement récurrent n'est prélevé automatiquement. Pour prolonger l'accès,
+          l'utilisateur doit effectuer un nouveau paiement validé avant ou après l'échéance.
         </p>
       </section>
 
@@ -45,9 +45,9 @@ export default function CGVPage() {
       <section>
         <h2 className="font-display text-xl font-semibold text-text">5. Résiliation</h2>
         <p>
-          L'utilisateur peut résilier son abonnement à tout moment depuis son dashboard.
-          L'accès est maintenu jusqu'à la fin de la période en cours. Aucun remboursement
-          n'est effectué pour les périodes non utilisées.
+          L'accès demeure disponible jusqu'à la fin de la période déjà payée, puis expire
+          si aucun nouveau paiement n'est effectué. Pour une demande de remboursement,
+          consulter la politique de remboursement.
         </p>
       </section>
 
@@ -70,8 +70,8 @@ export default function CGVPage() {
       <section>
         <h2 className="font-display text-xl font-semibold text-text">8. Facturation</h2>
         <p>
-          Une facture est envoyée par email après chaque paiement. Les factures sont disponibles
-          dans le dashboard de l'utilisateur.
+          L'historique des paiements est consultable dans la rubrique Mes commandes.
+          Pour un justificatif de paiement, contacter le support.
         </p>
       </section>
 

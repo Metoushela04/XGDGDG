@@ -10,9 +10,9 @@ export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-  // Si Supabase n'est pas configuré, laisser passer toutes les requêtes (mode dev/démo)
-  if (!supabaseUrl.includes("supabase") || supabaseKey.includes("placeholder")) {
-    return response;
+  // Protected/auth routes must never silently bypass authentication in production.
+  if (!supabaseUrl || !supabaseKey || supabaseKey.includes("placeholder")) {
+    return NextResponse.json({ error: "Authentification non configurée" }, { status: 503 });
   }
 
   const supabase = createServerClient(

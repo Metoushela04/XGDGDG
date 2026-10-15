@@ -36,7 +36,7 @@ export default async function DashboardPage() {
 
   const isSubscriber =
     sub?.status === "active" &&
-    (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
+    (!!sub.current_period_end && new Date(sub.current_period_end) > new Date());
 
   // 2. Favoris de l'utilisateur pour les coeurs
   const { data: favs } = await supabase

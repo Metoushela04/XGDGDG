@@ -12,15 +12,15 @@ export default function FAQPage() {
       questions: [
         {
           q: "Comment m'abonner à Vendix ?",
-          a: "Cliquez sur 'S'abonner', choisissez votre plan (mensuel ou annuel), et payez par Mobile Money ou carte bancaire. L'accès est immédiat.",
+          a: "Cliquez sur 'S'abonner', choisissez votre plan (mensuel ou annuel), et payez par Mobile Money ou carte bancaire. L'accès est activé après confirmation du paiement.",
         },
         {
           q: "Puis-je annuler mon abonnement ?",
-          a: "Oui, à tout moment depuis votre dashboard. Vous gardez l'accès jusqu'à la fin de votre période de facturation.",
+          a: "Il n'y a pas de renouvellement automatique à annuler. Votre accès se termine à la fin de la période payée si vous ne renouvelez pas.",
         },
         {
           q: "Y a-t-il un engagement ?",
-          a: "Non. L'abonnement mensuel est sans engagement. L'abonnement annuel est facturé pour 12 mois mais reste annulable.",
+          a: "Vous payez une période fixe de 30 ou 365 jours, sans prélèvement automatique.",
         },
       ],
     },
@@ -54,7 +54,7 @@ export default function FAQPage() {
         },
         {
           q: "Reçois-je une facture ?",
-          a: "Oui, une facture vous est envoyée par email après chaque paiement.",
+          a: "L'historique de vos paiements est disponible dans Mes commandes. Contactez le support pour un justificatif.",
         },
       ],
     },
@@ -63,7 +63,7 @@ export default function FAQPage() {
       questions: [
         {
           q: "Combien de téléchargements puis-je faire ?",
-          a: "Les téléchargements sont illimités avec l'abonnement actif. Vous pouvez télécharger autant de produits que vous voulez.",
+          a: "Le quota initial est de 30 nouveaux produits distincts par mois, configurable par l'administration. Retélécharger le même produit dans le mois ne consomme pas de quota supplémentaire.",
         },
         {
           q: "Les URL de téléchargement expirent-elles ?",

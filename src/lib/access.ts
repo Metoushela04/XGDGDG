@@ -17,34 +17,34 @@ export async function checkAccess(): Promise<AccessResult> {
   const supabase = await createClient();
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
+  if (authError || !user || !user.email_confirmed_at) {
     return { allowed: false, reason: "unauthenticated" };
   }
 
   // Vérifier le profil (suspension)
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("is_suspended")
     .eq("id", user.id)
     .single();
 
-  if (profile?.is_suspended) {
+  if (profileError || !profile || profile.is_suspended) {
     return { allowed: false, reason: "suspended" };
   }
 
   // Vérifier l'abonnement
-  const { data: sub } = await supabase
+  const { data: sub, error: subscriptionError } = await supabase
     .from("subscriptions")
     .select("status, current_period_end")
     .eq("user_id", user.id)
     .single();
 
-  if (!sub || sub.status !== "active") {
+  if (subscriptionError || !sub || sub.status !== "active") {
     return { allowed: false, reason: "no_subscription" };
   }
 
   // Vérifier l'expiration réelle même si le statut n'a pas encore été mis à jour
-  if (sub.current_period_end && new Date(sub.current_period_end) < new Date()) {
+  if (!sub.current_period_end || new Date(sub.current_period_end).getTime() <= Date.now()) {
     return { allowed: false, reason: "expired" };
   }
 
@@ -58,17 +58,17 @@ export async function checkAdmin(): Promise<{ isAdmin: true; userId: string } | 
   const supabase = await createClient();
 
   const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) {
+  if (error || !user || !user.email_confirmed_at) {
     return { isAdmin: false };
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, is_suspended")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") {
+  if (profileError || profile?.role !== "admin" || profile.is_suspended) {
     return { isAdmin: false };
   }
 

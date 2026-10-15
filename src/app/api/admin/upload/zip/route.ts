@@ -5,8 +5,8 @@ import { checkAdmin } from "@/lib/access";
 import { getSignedUploadUrl } from "@/lib/storage/r2";
 
 const zipUploadSchema = z.object({
-  filename: z.string().min(1, "Le nom du fichier est requis"),
-  contentType: z.string().default("application/zip"),
+  filename: z.string().min(5).max(128).regex(/\.zip$/i),
+  contentType: z.enum(["application/zip", "application/x-zip-compressed", "application/octet-stream"]).default("application/zip"),
 });
 
 export async function POST(req: NextRequest) {

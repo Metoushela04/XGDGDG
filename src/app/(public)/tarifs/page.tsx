@@ -19,7 +19,7 @@ export default function TarifsPage() {
             Tarifs <span className="text-accent">transparents</span>
           </h1>
           <p className="text-lg text-muted max-w-2xl mx-auto">
-            Un seul plan, deux options de paiement. Sans engagement.
+            Un seul accès, deux périodes payées à renouveler manuellement.
           </p>
         </motion.div>
 
@@ -29,7 +29,7 @@ export default function TarifsPage() {
           <SpotlightCard className="p-8">
             <div className="mb-8">
               <h3 className="font-display text-2xl font-semibold mb-2">Mensuel</h3>
-              <p className="text-sm text-muted">Flexibilité totale, sans engagement</p>
+              <p className="text-sm text-muted">Accès de 30 jours, sans renouvellement automatique</p>
             </div>
             <div className="mb-8">
               <span className="font-display text-6xl font-bold">29$</span>
@@ -38,7 +38,7 @@ export default function TarifsPage() {
             <ul className="space-y-4 mb-8">
               {[
                 "Accès complet au catalogue",
-                "Téléchargements illimités",
+                "30 nouveaux produits par mois (quota configurable)",
                 "Nouveautés chaque semaine",
                 "Licence PLR complète",
                 "Support par email",
@@ -141,11 +141,11 @@ export default function TarifsPage() {
             {[
               {
                 q: "Puis-je changer de plan ?",
-                a: "Oui, à tout moment. Le changement prend effet à la prochaine facturation.",
+                a: "Choisissez une autre durée lors de votre prochain paiement. Le changement de plan automatique n’est pas disponible.",
               },
               {
                 q: "Y a-t-il un engagement ?",
-                a: "Non. Vous pouvez annuler à tout moment. Vous gardez l'accès jusqu'à la fin de votre période.",
+                a: "Non. Il n’y a pas de prélèvement automatique : l’accès se termine à la fin de la période payée si vous ne renouvelez pas.",
               },
               {
                 q: "Les prix sont-ils en dollars ?",
