@@ -71,20 +71,20 @@ export function DashboardNotifications() {
   };
 
   return <>
-    <div className="relative">
+    <div className="static sm:relative">
       <button className="relative p-2 text-muted hover:text-text transition-colors" type="button"
         aria-label={`Notifications${unread ? `, ${unread} non lues` : ""}`}
         aria-expanded={open} onClick={() => { setOpen(!open); void refresh(); }}>
         <Bell className="w-5 h-5" />
         {unread > 0 && <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-accent px-1 text-[10px] font-bold text-background">{unread > 99 ? "99+" : unread}</span>}
       </button>
-      {open && <div role="region" aria-label="Notifications récentes" className="absolute right-0 top-11 z-50 w-[min(90vw,360px)] overflow-hidden rounded-2xl border border-[#222222] bg-surface shadow-2xl">
-        <div className="flex items-center justify-between border-b border-[#222222] px-4 py-3">
+      {open && <div role="region" aria-label="Notifications récentes" className="absolute left-3 right-3 top-full z-50 flex max-h-[calc(100dvh-5rem)] w-auto flex-col overflow-hidden rounded-xl border border-[#303a2c] bg-surface shadow-2xl sm:left-auto sm:right-0 sm:top-11 sm:w-[min(90vw,360px)]">
+        <div className="flex shrink-0 items-center justify-between border-b border-[#222222] px-4 py-3">
           <h2 className="font-display text-sm font-semibold text-text">Notifications</h2>
           <button type="button" aria-label="Fermer les notifications" className="text-muted hover:text-text" onClick={() => setOpen(false)}><X className="w-4 h-4" /></button>
         </div>
         {loadError && <p className="p-4 text-xs text-red-400">Impossible de charger les notifications. <button type="button" onClick={() => void refresh()} className="underline">Réessayer</button></p>}
-        <div className="max-h-80 overflow-y-auto">
+        <div className="min-h-0 overflow-y-auto">
           {!loadError && notifications.length === 0 && <p className="p-6 text-center text-sm text-muted">Aucune notification pour le moment.</p>}
           {notifications.map((n) => <div key={n.id} className={`border-b border-[#222222] p-4 text-sm ${n.is_read ? "" : "bg-accent/5"}`}>
             <div className="flex items-start justify-between gap-2"><p className="font-semibold text-text">{n.title}</p>{!n.is_read && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />}</div>
@@ -97,10 +97,10 @@ export function DashboardNotifications() {
             </div>
           </div>)}
         </div>
-        <Link href="/dashboard/notifications" onClick={() => setOpen(false)} className="block p-3 text-center text-xs text-accent hover:bg-surface2">Voir toutes les notifications</Link>
+        <Link href="/dashboard/notifications" onClick={() => setOpen(false)} className="block shrink-0 p-3 text-center text-xs text-accent hover:bg-surface2">Voir toutes les notifications</Link>
       </div>}
     </div>
-    {toast && <div role="status" className={`fixed bottom-5 right-5 z-[100] flex max-w-sm items-center gap-2 rounded-xl border bg-surface px-4 py-3 text-sm shadow-2xl ${toast.error ? "border-red-500/40 text-red-400" : "border-accent/40 text-text"}`}>
+    {toast && <div role="status" className={`fixed bottom-4 left-4 right-4 z-[100] flex items-center gap-2 rounded-xl border bg-surface px-4 py-3 text-sm shadow-2xl sm:bottom-5 sm:left-auto sm:right-5 sm:max-w-sm ${toast.error ? "border-red-500/40 text-red-400" : "border-accent/40 text-text"}`}>
       {toast.error ? <AlertCircle className="h-4 w-4 shrink-0" /> : <Check className="h-4 w-4 shrink-0 text-accent" />}
       {toast.message}<button type="button" aria-label="Fermer" onClick={() => setToast(null)}><X className="h-4 w-4" /></button>
     </div>}
