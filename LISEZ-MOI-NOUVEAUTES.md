@@ -1,9 +1,9 @@
-# Vendix — lot consolidé avec design « Nouveautés »
+# Vendix — version consolidée : menu mobile sur tout le dashboard
 
-Ce ZIP est la version à utiliser À LA PLACE de `Vendix-securite-paiements-telechargements.zip` et de `Vendix-Nouveautes-menu-gauche-correctif.zip`. Il réunit le lot dashboard + icônes + notifications + sécurité déjà livré, en remplaçant les deux fichiers concernés par la nouvelle page « Nouveautés » et son header mobile. Le menu mobile reste le panneau coulissant depuis la gauche. La page d'accueil publique n'a pas été redessinée.
+Cette archive REMPLACE les précédents ZIP Vendix. Elle conserve l'ensemble du lot dashboard + notifications + icônes + sécurité déjà livré, et inclut la page « Nouveautés » validée ainsi que le header mobile avec menu ouvrant un panneau depuis la gauche SUR TOUTES LES PAGES DU DASHBOARD MEMBRE (y compris Tableau de bord, Mes commandes, Espionnage, Nouveautés, Affiliation, Mon profil et Support). Les liens et l'état actif du menu dépendent de la page. Le site public et l'admin ne sont pas modifiés par cette dernière demande ; l'accueil public n'a pas été redessiné.
 
-Ce n'est pas le dépôt complet : extraire à la racine du projet XGDGDG, en écrasant uniquement les fichiers présents dans cette archive. Ne pas empiler l'ancien lot par-dessus celui-ci après extraction.
+Ce ZIP n'est pas le dépôt complet : extraire à la racine du projet XGDGDG, en écrasant les fichiers de même nom. Ne pas appliquer un ancien ZIP Vendix après celui-ci.
 
-IMPORTANT : aucun déploiement n'a été fait. Lire `INSTALLATION-SECURITE.md` et `SECURITY-DEPLOYMENT.md` dans ce ZIP : appliquer les migrations nécessaires sur staging et configurer/tester Chariow avant tout déploiement. Les migrations n'ont pas été appliquées ici. Node 22+ conseillé.
+Vérifications sur le dépôt local : `tsc --noEmit`, `npm run build` et 5 tests unitaires OK ; lint des deux fichiers visuels sans erreur, avec 2 avertissements Next.js préexistants sur `<img>`. Le comportement visuel n'a pas été testé dans une session utilisateur réelle.
 
-Vérifications locales sur le dépôt avec ces deux fichiers : typecheck et build réussis ; 5 tests unitaires réussis ; lint des deux fichiers sans erreur (2 avertissements `<img>` existants). Paiements et données réelles non testés.
+IMPORTANT : aucun déploiement ni migration SQL appliquée. Lire `INSTALLATION-SECURITE.md` et `SECURITY-DEPLOYMENT.md` dans ce ZIP. Installer Node.js 22+ et effectuer les migrations, la configuration et les tests paiements/téléchargements sur staging avant toute publication.

@@ -23,7 +23,6 @@ const navItems = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isNouveautes = pathname === "/dashboard/nouveautes";
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const closeSidebar = () => setIsSidebarOpen(false);
@@ -41,47 +40,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-background relative">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-surface/80 backdrop-blur-xl border-b border-[#222222]">
-        <div className={`flex items-center justify-between px-4 py-3 ${isNouveautes ? "min-h-16 md:min-h-0" : ""}`}>
-          <div className="flex items-center gap-3">
-            {!isNouveautes && (
-              <button
-                type="button"
-                className="md:hidden p-2 -ml-2 text-text hover:text-accent transition-colors"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
-                aria-controls="dashboard-mobile-menu"
-                aria-expanded={isSidebarOpen}
-              >
-                {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-            )}
-            <Link href="/dashboard" className="flex items-center gap-2.5">
-              <img src="/logo-mark.png" alt="Vendix" className="h-7 w-auto" style={{ mixBlendMode: "screen" }} />
-              <span className={`font-display font-semibold ${isNouveautes ? "" : "hidden sm:inline"}`}>Vendix</span>
-            </Link>
-          </div>
+        <div className="flex min-h-16 items-center justify-between px-4 py-3 md:min-h-0">
+          <Link href="/dashboard" className="flex items-center gap-2.5">
+            <img src="/logo-mark.png" alt="Vendix" className="h-7 w-auto" style={{ mixBlendMode: "screen" }} />
+            <span className="font-display font-semibold">Vendix</span>
+          </Link>
           <div className="flex items-center gap-2">
             <DashboardNotifications />
             <Link
               href="/dashboard/profil"
               aria-label="Mon profil"
-              className={`bg-surface2 border rounded-full flex items-center justify-center text-sm font-medium hover:border-accent/50 transition-colors ${isNouveautes ? "w-9 h-9 md:w-8 md:h-8 border-[#56634e] md:border-[#222222]" : "w-8 h-8 border-[#222222]"}`}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#56634e] bg-surface2 text-sm font-medium transition-colors hover:border-accent/50 md:h-8 md:w-8 md:border-[#222222]"
             >
-              {isNouveautes ? <UserRound aria-hidden="true" className="h-4 w-4 md:hidden" /> : null}
-              <span className={isNouveautes ? "hidden md:inline" : ""}>U</span>
+              <UserRound aria-hidden="true" className="h-4 w-4 md:hidden" />
+              <span className="hidden md:inline">U</span>
             </Link>
-            {isNouveautes && (
-              <button
-                type="button"
-                className="md:hidden grid h-10 w-10 place-items-center rounded-lg border border-[#56634e] text-text transition-colors hover:border-accent/50 hover:text-accent"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
-                aria-controls="dashboard-mobile-menu"
-                aria-expanded={isSidebarOpen}
-              >
-                {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
-            )}
+            <button
+              type="button"
+              className="grid h-10 w-10 place-items-center rounded-lg border border-[#56634e] text-text transition-colors hover:border-accent/50 hover:text-accent md:hidden"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
+              aria-controls="dashboard-mobile-menu"
+              aria-expanded={isSidebarOpen}
+            >
+              {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
       </header>
@@ -136,7 +119,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </AnimatePresence>
 
       {/* Main Content */}
-      <div className={`flex ${isNouveautes ? "pt-16 md:pt-14" : "pt-14"}`}>
+      <div className="flex pt-16 md:pt-14">
         {/* Desktop Sidebar */}
         <aside className="hidden md:block fixed left-0 top-14 bottom-0 w-64 bg-surface/50 border-r border-[#222222] overflow-y-auto">
           <nav className="p-4 space-y-1">
